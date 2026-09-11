@@ -1,0 +1,19 @@
+
+:root{--bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#6b7280;--accent:#111827;--line:#e5e7eb}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;color:var(--text)}
+header{background:#111827;color:white;padding:18px 18px 16px;position:sticky;top:0;z-index:3}
+.brand{font-size:20px;font-weight:800}.sub{font-size:12px;opacity:.75;margin-top:3px}
+main{max-width:720px;margin:auto;padding:12px 12px 40px}.card{background:var(--card);border-radius:18px;padding:16px;margin:12px 0;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+h2{font-size:17px;margin:0 0 14px}label{display:block;font-size:13px;font-weight:700;margin:10px 0}
+select,textarea,input[type=file]{width:100%;margin-top:6px;border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff;font-size:16px}
+textarea{resize:vertical;line-height:1.55}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.row{display:flex;gap:8px;margin-top:10px}.row>*{flex:1}
+button,.linkbtn{border:0;border-radius:12px;padding:13px 12px;font-size:15px;font-weight:800;text-align:center;text-decoration:none;cursor:pointer}
+.primary{background:#111827;color:white}.secondary{background:#eef0f3;color:#111827}.wide{width:100%}.linkbtn{background:#f3f4f6;color:#111827}
+.hint{font-size:12px;color:var(--muted);margin-bottom:0}.photos{display:grid;gap:8px;margin-top:10px}
+.photo{display:grid;grid-template-columns:60px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:8px}
+.photo img{width:60px;height:60px;object-fit:cover;border-radius:9px}.photo .name{font-size:12px;word-break:break-all}.status{font-size:11px;color:var(--muted)}
+.edited{margin-top:8px}.edited img{width:100%;border-radius:12px}.download{display:inline-block;margin-top:6px;font-size:13px;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}.chip{background:#f1f5f9;border-radius:999px;padding:6px 9px;font-size:12px}
+.busy{position:fixed;inset:0;background:rgba(17,24,39,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;z-index:99}.hidden{display:none}
+.spinner{width:42px;height:42px;border:4px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:12px}@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:430px){.grid2{grid-template-columns:1fr}.row{flex-direction:column}.row>*{width:100%}}
