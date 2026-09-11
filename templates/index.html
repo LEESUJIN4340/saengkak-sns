@@ -1,0 +1,64 @@
+
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="icon" href="/static/icon.svg">
+<title>생각키움 SNS 매니저</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <div class="brand">♞ 생각키움 SNS 매니저</div>
+  <div class="sub">수업사진 보호 · 네이버 블로그 · 인스타그램</div>
+</header>
+
+<main>
+<section class="card">
+  <h2>1. 오늘 수업</h2>
+  <div class="grid2">
+    <label>지점<select id="branch"><option>사우점</option><option>장기점</option><option selected>구래점</option><option>전체</option></select></label>
+    <label>콘텐츠<select id="contentType"><option selected>수업후기</option><option>학생 성장사례</option><option>사고력체스 소개</option><option>체스 교육정보</option><option>대회후기</option><option>신규모집</option><option>방학특강</option></select></label>
+  </div>
+  <label>대상<select id="target"><option>유아</option><option selected>초등학생</option><option>중학생</option><option>성인</option><option>전체</option></select></label>
+  <label>수업 내용<textarea id="lesson" rows="4" placeholder="예: 포크와 핀을 배우고 실전 대국에서 후보 수 3개를 찾아 이유를 설명함"></textarea></label>
+</section>
+
+<section class="card">
+  <h2>2. 수업사진 보호</h2>
+  <input id="photos" type="file" accept="image/*" multiple>
+  <div id="photoList" class="photos"></div>
+  <div class="row">
+    <button class="secondary" onclick="checkPhotos()">전면 얼굴 판별</button>
+    <button class="primary" onclick="editNeeded()">필요 사진 비식별화</button>
+  </div>
+  <p class="hint">원본을 덮어쓰지 않습니다. 편집본은 별도로 만들어집니다.</p>
+</section>
+
+<section class="card">
+  <h2>3. SNS 글 만들기</h2>
+  <button class="primary wide" onclick="generateContent()">블로그 + 인스타 글 생성</button>
+  <div id="keywords" class="chips"></div>
+  <textarea id="result" rows="18" placeholder="생성 결과가 여기에 표시됩니다."></textarea>
+  <div class="row">
+    <button class="secondary" onclick="copyResult()">결과 복사</button>
+    <button class="secondary" onclick="shareResult()">공유하기</button>
+  </div>
+</section>
+
+<section class="card">
+  <h2>4. 게시</h2>
+  <div class="row">
+    <a class="linkbtn" href="https://m.blog.naver.com/" target="_blank">네이버 블로그 열기</a>
+    <a class="linkbtn" href="https://www.instagram.com/" target="_blank">인스타그램 열기</a>
+  </div>
+</section>
+</main>
+
+<div id="busy" class="busy hidden"><div class="spinner"></div><div id="busyText">처리 중...</div></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
