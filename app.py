@@ -156,36 +156,37 @@ async def privacy_edit(file: UploadFile = File(...)):
         raise HTTPException(400, "사진은 15MB 이하로 선택해 주세요.")
 
     dalle_prompt = (
-        "A realistic photo-style image for a Korean children's chess academy promotional use. "
-        "Scene: Two or three elementary school children (ages 8-12) sitting at a wooden desk "
-        "with a chess board between them. One child is resting their chin on their hand, "
-        "deeply thinking about the next chess move. Another child looks at the board from the side. "
-        "Faces are shown at an angle or looking down at the board — not directly at the camera. "
-        "Warm, bright classroom with natural light from windows. "
-        "Chess pieces are clearly visible on the board. "
-        "Children wear casual Korean school clothes. "
-        "Photo feels natural and candid, not posed or illustrated. "
-        "No text, no logos, no watermarks. "
-        "Square composition, suitable for blog and Instagram."
+        "Children playing chess in a bright Korean classroom. "
+        "Kids aged 8-12 sitting at desks with chess boards, thinking deeply. "
+        "Side view or overhead angle, faces not clearly visible. "
+        "Natural warm lighting, realistic photo style. "
+        "No text, no logos. Square format."
     )
 
     c = get_client()
-    try:
-        res = c.images.generate(
-            model="dall-e-3",
-            prompt=dalle_prompt,
-            size="1024x1024",
-            quality="hd",
-            n=1
-        )
-        img_url = res.data[0].url
-        if not img_url:
-            raise RuntimeError("이미지 URL을 받지 못했습니다.")
 
-        out = OUT / f"privacy_{uuid.uuid4().hex}.png"
-        img_data = urllib.request.urlopen(img_url, timeout=120).read()
-        out.write_bytes(img_data)
-        return {"url": f"/outputs/{out.name}", "mode": "generated"}
+    # dall-e-3 먼저 시도, 실패하면 dall-e-2로 폴백
+    model = "gpt-image-1"
+for attempt in range(1):
+        try:
+            kwargs = dict(
+                model=model,
+                prompt=dalle_prompt,
+                size="1024x1024",
+                n=1
+            )
 
-    except Exception as e:
-        raise HTTPException(500, f"이미지 생성 오류: {str(e)}")
+            res = c.images.generate(**kwargs)
+            img_url = res.data[0].url
+            if not img_url:
+                continue
+
+            out = OUT / f"privacy_{uuid.uuid4().hex}.png"
+            img_data = urllib.request.urlopen(img_url, timeout=120).read()
+            out.write_bytes(img_data)
+            return {"url": f"/outputs/{out.name}", "mode": f"generated_{model}"}
+
+        except Exception as e:
+            if model == "dall-e-2":
+                raise HTTPException(500, f"이미지 생성 실패: {str(e)}")
+            continue
