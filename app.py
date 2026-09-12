@@ -1,4 +1,3 @@
-
 import os, json, base64, re, mimetypes, uuid
 from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
@@ -50,16 +49,6 @@ def pick_keywords(branch, lesson, ctype):
     for x in selected:
         if x not in out: out.append(x)
     return out[:7]
-
-def response_text(r):
-    if getattr(r, "output_text", None):
-        return r.output_text
-    texts=[]
-    for item in getattr(r, "output", []) or []:
-        for c in getattr(item, "content", []) or []:
-            t=getattr(c,"text",None)
-            if t: texts.append(t)
-    return "\n".join(texts)
 
 def image_to_data_url(data: bytes, content_type: str):
     return f"data:{content_type or 'image/jpeg'};base64,{base64.b64encode(data).decode()}"
@@ -118,8 +107,12 @@ async def generate(
 메인:
 서브:
 """
-    r = client().responses.create(model="gpt-5.6-luna", input=prompt)
-    return {"text":response_text(r).strip(), "keywords":kws}
+    r = client().chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role":"user","content":prompt}],
+        max_tokens=2000
+    )
+    return {"text": r.choices[0].message.content.strip(), "keywords": kws}
 
 @app.post("/api/privacy-check")
 async def privacy_check(file: UploadFile = File(...)):
@@ -137,15 +130,16 @@ async def privacy_check(file: UploadFile = File(...)):
 JSON 한 줄만 출력:
 {"needs_edit":true,"reason":"짧은 이유"}
 """
-    r = client().responses.create(
-        model="gpt-5.6-luna",
-        input=[{"role":"user","content":[
-            {"type":"input_text","text":prompt},
-            {"type":"input_image","image_url":image_to_data_url(data, file.content_type or "image/jpeg")}
-        ]}]
+    r = client().chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role":"user","content":[
+            {"type":"text","text":prompt},
+            {"type":"image_url","image_url":{"url": image_to_data_url(data, file.content_type or "image/jpeg")}}
+        ]}],
+        max_tokens=100
     )
-    txt=response_text(r).strip()
-    m=re.search(r'\{.*\}',txt,re.S)
+    txt = r.choices[0].message.content.strip()
+    m = re.search(r'\{.*\}', txt, re.S)
     if not m:
         return {"needs_edit":True,"reason":"판별 불명확하여 안전하게 편집 대상으로 처리"}
     try:
@@ -158,41 +152,61 @@ async def privacy_edit(file: UploadFile = File(...)):
     data = await file.read()
     if len(data) > 15*1024*1024:
         raise HTTPException(400, "사진은 15MB 이하로 선택해 주세요.")
+
     ext = Path(file.filename or "photo.jpg").suffix.lower()
     if ext not in [".jpg",".jpeg",".png",".webp"]:
         ext = ".jpg"
-    tmp = OUT / f"src_{uuid.uuid4().hex}{ext}"
-    tmp.write_bytes(data)
-    out = OUT / f"privacy_{uuid.uuid4().hex}.png"
-    edit_prompt = """
-이 이미지는 어린이 체스학원의 실제 수업 홍보사진이다.
-수업 장소감, 인원수, 체스판, 책상 배치, 수업 활동과 자연스러운 분위기는 최대한 유지한다.
 
-개인 식별을 막기 위해:
-1. 정면/준정면으로 선명하게 보이는 학생은 '원본과 동일인이 아님이 분명한' 자연스러운 비식별 학생으로 재구성한다.
-2. 모자이크나 블러처럼 보이지 않게 실제 촬영 사진처럼 자연스럽게 한다.
-3. 가능하면 시선과 얼굴 방향을 체스판 쪽, 옆쪽, 아래쪽으로 자연스럽게 바꾼다.
-4. 이름표, 학생이름, 학교명, 전화번호 등 읽힐 수 있는 개인정보는 제거한다.
-5. 원본 얼굴의 고유 특징을 복제하지 않는다.
-6. 체스판과 기물은 정상적인 체스 수업처럼 자연스럽게 유지한다.
-7. 만화화, 과도한 피부보정, 광고합성 느낌은 피한다.
-8. 새 로고나 글자를 임의로 넣지 않는다.
+    # 1단계: GPT-4o로 이미지 분석
+    analysis_prompt = """
+이 사진에서 학생 얼굴이 어떤 상태인지 간단히 설명해줘.
+- 몇 명이 보이는지
+- 얼굴이 정면인지 측면인지 뒷모습인지
+- 체스판이 보이는지
+JSON으로만 답해:
+{"count":1,"face_direction":"정면","has_chessboard":true}
 """
-    c=client()
+    analysis = client().chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role":"user","content":[
+            {"type":"text","text":analysis_prompt},
+            {"type":"image_url","image_url":{"url": image_to_data_url(data, file.content_type or "image/jpeg")}}
+        ]}],
+        max_tokens=100
+    )
+    
+    # 2단계: DALL-E 3로 홍보용 이미지 생성
+    # 블로그/인스타 홍보용 1:1 비율
+    dalle_prompt = """Create a natural, realistic photo-style image for a Korean children's chess academy (생각키움연구소) promotional use.
+
+Scene: Elementary school aged children (7-13 years old) sitting at desks with chess boards, deeply focused on a chess game or thinking about their next move. The children should be shown from the side or at an angle where faces are not clearly identifiable - showing concentration through body language, head tilted down toward the board, hand on chin thinking pose.
+
+Style requirements:
+- Warm, bright classroom atmosphere
+- Natural photography style (not illustrated, not cartoon)
+- Children wearing casual school clothes
+- Chess boards and pieces clearly visible and realistic
+- Soft natural lighting from windows
+- Clean, organized classroom environment
+- Safe for all ages, wholesome educational setting
+
+Image purpose: Blog and Instagram promotion for a chess academy
+Aspect ratio consideration: Square composition works best
+Do NOT include: Text, logos, watermarks, faces shown clearly enough to identify individuals"""
+
     try:
-        with open(tmp,"rb") as f:
-            res=c.images.edit(model="gpt-image-2", image=f, prompt=edit_prompt, size="1024x1024")
-        item=res.data[0]
-        b64=getattr(item,"b64_json",None)
-        if b64:
-            out.write_bytes(base64.b64decode(b64))
-        else:
-            url=getattr(item,"url",None)
-            if not url:
-                raise RuntimeError("편집 이미지 데이터 없음")
-            import urllib.request
-            out.write_bytes(urllib.request.urlopen(url,timeout=120).read())
-        return {"url":f"/outputs/{out.name}"}
-    finally:
-        try: tmp.unlink()
-        except: pass
+        res = client().images.generate(
+            model="dall-e-3",
+            prompt=dalle_prompt,
+            size="1024x1024",  # 블로그/인스타 정방형
+            quality="hd",
+            response_format="b64_json"
+        )
+        
+        b64 = res.data[0].b64_json
+        out = OUT / f"privacy_{uuid.uuid4().hex}.png"
+        out.write_bytes(base64.b64decode(b64))
+        return {"url": f"/outputs/{out.name}", "mode": "generated"}
+
+    except Exception as e:
+        raise HTTPException(500, f"이미지 생성 오류: {str(e)}")
