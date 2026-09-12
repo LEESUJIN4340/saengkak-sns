@@ -72,7 +72,6 @@ async def generate(
     kws = pick_keywords(branch, lesson, content_type)
     prompt = f"""
 너는 '생각키움연구소'의 네이버 블로그/인스타그램 콘텐츠 에디터다.
-
 지점: {branch}
 콘텐츠유형: {content_type}
 대상: {target}
@@ -81,10 +80,8 @@ async def generate(
 
 작성 원칙:
 - 실제 수업 후기처럼 구체적이고 자연스럽게.
-- 네이버 검색을 의식하되 키워드를 억지로 나열하지 말 것.
 - 제목에는 핵심 키워드 1~2개만.
 - 본문에는 관련 키워드 4~7개를 문맥 속에 자연스럽게 분산.
-- 같은 핵심 키워드는 본문에서 2회 넘게 반복하지 말 것.
 - 모바일에서 읽기 좋게 문단을 짧게.
 
 출력 형식:
@@ -97,7 +94,7 @@ async def generate(
 900~1500자, 소제목 3~5개
 
 ===인스타그램===
-220~500자, 블로그 문장 그대로 복사하지 말 것
+220~500자
 
 ===해시태그===
 10~18개
@@ -106,83 +103,3 @@ async def generate(
 메인:
 서브:
 """
-    c = get_client()
-    r = c.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role":"user","content":prompt}],
-        max_tokens=2000
-    )
-    return {"text": r.choices[0].message.content.strip(), "keywords": kws}
-
-@app.post("/api/privacy-check")
-async def privacy_check(file: UploadFile = File(...)):
-    data = await file.read()
-    if len(data) > 15*1024*1024:
-        raise HTTPException(400, "사진은 15MB 이하로 선택해 주세요.")
-    prompt = """
-학원 수업 홍보 후보 사진이다.
-다음 중 하나라도 해당하면 needs_edit=true:
-- 아동/학생의 정면 또는 준정면 얼굴이 알아볼 수 있을 정도로 선명함
-- 이름표, 이름, 학교명, 전화번호 등 식별정보가 읽힐 가능성이 있음
-뒷모습/측면 위주이고 얼굴이 작아 식별이 어려우면 false.
-JSON 한 줄만 출력: {"needs_edit":true,"reason":"짧은 이유"}
-"""
-    c = get_client()
-    r = c.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role":"user","content":[
-            {"type":"text","text":prompt},
-            {"type":"image_url","image_url":{"url": image_to_data_url(data, file.content_type or "image/jpeg")}}
-        ]}],
-        max_tokens=100
-    )
-    txt = r.choices[0].message.content.strip()
-    m = re.search(r'\{.*\}', txt, re.S)
-    if not m:
-        return {"needs_edit":True,"reason":"판별 불명확 — 안전하게 편집 대상으로 처리"}
-    try:
-        return json.loads(m.group(0))
-    except Exception:
-        return {"needs_edit":True,"reason":"판별 오류 — 안전하게 편집 대상으로 처리"}
-
-@app.post("/api/privacy-edit")
-async def privacy_edit(file: UploadFile = File(...)):
-    data = await file.read()
-    if len(data) > 15*1024*1024:
-        raise HTTPException(400, "사진은 15MB 이하로 선택해 주세요.")
-
-    image_prompt = (
-        "A natural realistic photo of elementary school children aged 8-12 "
-        "sitting at desks in a bright Korean classroom, playing chess. "
-        "Children are shown from the side or looking down at the chess board, "
-        "deeply focused and thinking. Faces are not clearly visible. "
-        "Chess pieces and board clearly shown. Warm natural lighting. "
-        "Wholesome educational setting. No text, no logos. Square composition."
-    )
-
-    c = get_client()
-    try:
-        res = c.images.generate(
-            model="gpt-image-1",
-            prompt=image_prompt,
-            size="1024x1024",
-            n=1
-        )
-        item = res.data[0]
-        b64 = getattr(item, "b64_json", None)
-        if b64:
-            out = OUT / f"privacy_{uuid.uuid4().hex}.png"
-            out.write_bytes(base64.b64decode(b64))
-            return {"url": f"/outputs/{out.name}", "mode": "generated"}
-
-        img_url = getattr(item, "url", None)
-        if img_url:
-            out = OUT / f"privacy_{uuid.uuid4().hex}.png"
-            img_data = urllib.request.urlopen(img_url, timeout=120).read()
-            out.write_bytes(img_data)
-            return {"url": f"/outputs/{out.name}", "mode": "generated"}
-
-        raise RuntimeError("이미지 데이터 없음")
-
-    except Exception as e:
-        raise HTTPException(500, f"이미지 생성 오류: {str(e)}")
