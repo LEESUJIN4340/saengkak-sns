@@ -1,11 +1,12 @@
-import os, json, base64, re, mimetypes, uuid
+import os, json, base64, re, uuid
 from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 from openai import OpenAI
+import urllib.request
 
 BASE = Path(__file__).resolve().parent
 OUT = BASE / "outputs"
@@ -30,7 +31,7 @@ BRANCH = {
     "전체":["김포체스학원","생각키움연구소체스"]
 }
 
-def client():
+def get_client():
     key = os.getenv("OPENAI_API_KEY")
     if not key:
         raise HTTPException(500, "서버에 OPENAI_API_KEY가 설정되어 있지 않습니다.")
@@ -107,7 +108,8 @@ async def generate(
 메인:
 서브:
 """
-    r = client().chat.completions.create(
+    c = get_client()
+    r = c.chat.completions.create(
         model="gpt-4o",
         messages=[{"role":"user","content":prompt}],
         max_tokens=2000
@@ -124,13 +126,13 @@ async def privacy_check(file: UploadFile = File(...)):
 다음 중 하나라도 해당하면 needs_edit=true:
 - 아동/학생의 정면 또는 준정면 얼굴이 알아볼 수 있을 정도로 선명함
 - 이름표, 이름, 학교명, 전화번호 등 식별정보가 읽힐 가능성이 있음
-- 특정 학생을 쉽게 알아볼 수 있는 매우 선명한 얼굴 클로즈업
 
 뒷모습/측면 위주이고 얼굴이 작아 식별이 어려우면 false 가능.
 JSON 한 줄만 출력:
 {"needs_edit":true,"reason":"짧은 이유"}
 """
-    r = client().chat.completions.create(
+    c = get_client()
+    r = c.chat.completions.create(
         model="gpt-4o",
         messages=[{"role":"user","content":[
             {"type":"text","text":prompt},
@@ -141,11 +143,11 @@ JSON 한 줄만 출력:
     txt = r.choices[0].message.content.strip()
     m = re.search(r'\{.*\}', txt, re.S)
     if not m:
-        return {"needs_edit":True,"reason":"판별 불명확하여 안전하게 편집 대상으로 처리"}
+        return {"needs_edit":True,"reason":"판별 불명확 — 안전하게 편집 대상으로 처리"}
     try:
         return json.loads(m.group(0))
     except Exception:
-        return {"needs_edit":True,"reason":"판별 결과 오류로 안전하게 편집 대상으로 처리"}
+        return {"needs_edit":True,"reason":"판별 오류 — 안전하게 편집 대상으로 처리"}
 
 @app.post("/api/privacy-edit")
 async def privacy_edit(file: UploadFile = File(...)):
@@ -153,59 +155,36 @@ async def privacy_edit(file: UploadFile = File(...)):
     if len(data) > 15*1024*1024:
         raise HTTPException(400, "사진은 15MB 이하로 선택해 주세요.")
 
-    ext = Path(file.filename or "photo.jpg").suffix.lower()
-    if ext not in [".jpg",".jpeg",".png",".webp"]:
-        ext = ".jpg"
-
-    # 1단계: GPT-4o로 이미지 분석
-    analysis_prompt = """
-이 사진에서 학생 얼굴이 어떤 상태인지 간단히 설명해줘.
-- 몇 명이 보이는지
-- 얼굴이 정면인지 측면인지 뒷모습인지
-- 체스판이 보이는지
-JSON으로만 답해:
-{"count":1,"face_direction":"정면","has_chessboard":true}
-"""
-    analysis = client().chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role":"user","content":[
-            {"type":"text","text":analysis_prompt},
-            {"type":"image_url","image_url":{"url": image_to_data_url(data, file.content_type or "image/jpeg")}}
-        ]}],
-        max_tokens=100
+    dalle_prompt = (
+        "A realistic photo-style image for a Korean children's chess academy promotional use. "
+        "Scene: Two or three elementary school children (ages 8-12) sitting at a wooden desk "
+        "with a chess board between them. One child is resting their chin on their hand, "
+        "deeply thinking about the next chess move. Another child looks at the board from the side. "
+        "Faces are shown at an angle or looking down at the board — not directly at the camera. "
+        "Warm, bright classroom with natural light from windows. "
+        "Chess pieces are clearly visible on the board. "
+        "Children wear casual Korean school clothes. "
+        "Photo feels natural and candid, not posed or illustrated. "
+        "No text, no logos, no watermarks. "
+        "Square composition, suitable for blog and Instagram."
     )
-    
-    # 2단계: DALL-E 3로 홍보용 이미지 생성
-    # 블로그/인스타 홍보용 1:1 비율
-    dalle_prompt = """Create a natural, realistic photo-style image for a Korean children's chess academy (생각키움연구소) promotional use.
 
-Scene: Elementary school aged children (7-13 years old) sitting at desks with chess boards, deeply focused on a chess game or thinking about their next move. The children should be shown from the side or at an angle where faces are not clearly identifiable - showing concentration through body language, head tilted down toward the board, hand on chin thinking pose.
-
-Style requirements:
-- Warm, bright classroom atmosphere
-- Natural photography style (not illustrated, not cartoon)
-- Children wearing casual school clothes
-- Chess boards and pieces clearly visible and realistic
-- Soft natural lighting from windows
-- Clean, organized classroom environment
-- Safe for all ages, wholesome educational setting
-
-Image purpose: Blog and Instagram promotion for a chess academy
-Aspect ratio consideration: Square composition works best
-Do NOT include: Text, logos, watermarks, faces shown clearly enough to identify individuals"""
-
+    c = get_client()
     try:
-        res = client().images.generate(
+        res = c.images.generate(
             model="dall-e-3",
             prompt=dalle_prompt,
-            size="1024x1024",  # 블로그/인스타 정방형
+            size="1024x1024",
             quality="hd",
-            response_format="b64_json"
+            n=1
         )
-        
-        b64 = res.data[0].b64_json
+        img_url = res.data[0].url
+        if not img_url:
+            raise RuntimeError("이미지 URL을 받지 못했습니다.")
+
         out = OUT / f"privacy_{uuid.uuid4().hex}.png"
-        out.write_bytes(base64.b64decode(b64))
+        img_data = urllib.request.urlopen(img_url, timeout=120).read()
+        out.write_bytes(img_data)
         return {"url": f"/outputs/{out.name}", "mode": "generated"}
 
     except Exception as e:
