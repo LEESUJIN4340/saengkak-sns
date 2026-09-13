@@ -1,64 +1,645 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#111827">
-<link rel="manifest" href="/static/manifest.json">
-<link rel="icon" href="/static/icon.svg">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="생각키움SNS">
+<meta name="theme-color" content="#3B5BDB">
 <title>생각키움 SNS 매니저</title>
-<link rel="stylesheet" href="/static/style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Square:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Nanum Square', 'Noto Sans KR', sans-serif;
+  background: #f0f4ff;
+  color: #1e293b;
+  min-height: 100vh;
+  font-size: 15px;
+}
+
+.header {
+  background: linear-gradient(135deg, #3B5BDB, #4C6EF5);
+  color: white;
+  padding: 18px 16px 14px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(59,91,219,0.3);
+}
+.header h1 { font-size: 17px; font-weight: 800; letter-spacing: -0.3px; }
+.header p { font-size: 12px; opacity: 0.85; margin-top: 3px; }
+
+.container { padding: 14px; max-width: 480px; margin: 0 auto; }
+
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.card-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
+}
+
+.field-group { margin-bottom: 13px; }
+label.field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 6px;
+}
+select, textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: 'Nanum Square', sans-serif;
+  color: #1e293b;
+  background: #fafafa;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+select:focus, textarea:focus { border-color: #3B5BDB; background: white; }
+textarea { resize: none; min-height: 90px; line-height: 1.6; }
+
+.btn-generate {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #3B5BDB, #4C6EF5);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 800;
+  font-family: 'Nanum Square', sans-serif;
+  cursor: pointer;
+  letter-spacing: -0.3px;
+  box-shadow: 0 4px 14px rgba(59,91,219,0.35);
+  transition: all 0.2s;
+}
+.btn-generate:active { transform: scale(0.98); opacity: 0.9; }
+.btn-generate:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.loading {
+  display: none;
+  text-align: center;
+  padding: 28px;
+}
+.spinner {
+  width: 38px; height: 38px;
+  border: 3px solid #bfdbfe;
+  border-top-color: #3B5BDB;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading p { color: #64748b; font-size: 14px; font-weight: 700; }
+
+/* 결과 탭 */
+.result-section { display: none; margin-top: 4px; }
+
+.tab-bar {
+  display: flex;
+  background: white;
+  border-radius: 14px;
+  padding: 5px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  gap: 4px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: 'Nanum Square', sans-serif;
+  cursor: pointer;
+  background: transparent;
+  color: #94a3b8;
+  transition: all 0.2s;
+}
+.tab-btn.active {
+  background: linear-gradient(135deg, #3B5BDB, #4C6EF5);
+  color: white;
+  box-shadow: 0 2px 8px rgba(59,91,219,0.3);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.result-card {
+  background: white;
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.result-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #3B5BDB;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* 블로그 본문 스타일 */
+.blog-content {
+  font-family: 'Nanum Square', sans-serif;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #374151;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.blog-content .blog-h2 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 16px 0 8px;
+  display: block;
+}
+
+.plain-text {
+  font-family: 'Nanum Square', sans-serif;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #374151;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.hashtag-text {
+  font-family: 'Nanum Square', sans-serif;
+  font-size: 13px;
+  color: #4C6EF5;
+  line-height: 2;
+  word-break: break-all;
+}
+
+.copy-btn {
+  background: #eff6ff;
+  color: #3B5BDB;
+  border: 1.5px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  font-family: 'Nanum Square', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.copy-btn:active, .copy-btn.copied {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+/* 저장된 글 섹션 */
+.history-section {
+  margin-top: 4px;
+}
+.history-item {
+  background: white;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: all 0.2s;
+  border-left: 3px solid #3B5BDB;
+}
+.history-item:active { transform: scale(0.99); }
+.history-date {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.history-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 3px;
+}
+.history-branch {
+  font-size: 12px;
+  color: #3B5BDB;
+  font-weight: 700;
+}
+.history-empty {
+  text-align: center;
+  padding: 30px;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* 하단 네비 */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: white;
+  display: flex;
+  border-top: 1px solid #e2e8f0;
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-btn {
+  flex: 1;
+  padding: 12px 0 10px;
+  border: none;
+  background: transparent;
+  font-family: 'Nanum Square', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transition: color 0.2s;
+}
+.nav-btn.active { color: #3B5BDB; }
+.nav-btn .nav-icon { font-size: 20px; }
+
+.page { display: none; padding-bottom: 80px; }
+.page.active { display: block; }
+
+.toast {
+  position: fixed;
+  bottom: 80px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #1e293b;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Nanum Square', sans-serif;
+  opacity: 0;
+  transition: all 0.3s;
+  z-index: 999;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 800;
+  background: #dbeafe;
+  color: #1d4ed8;
+  margin-left: 6px;
+}
+</style>
 </head>
 <body>
-<header>
-  <div class="brand">♞ 생각키움 SNS 매니저</div>
-  <div class="sub">수업사진 보호 · 네이버 블로그 · 인스타그램</div>
-</header>
 
-<main>
-<section class="card">
-  <h2>1. 오늘 수업</h2>
-  <div class="grid2">
-    <label>지점<select id="branch"><option>사우점</option><option>장기점</option><option selected>구래점</option><option>전체</option></select></label>
-    <label>콘텐츠<select id="contentType"><option selected>수업후기</option><option>학생 성장사례</option><option>사고력체스 소개</option><option>체스 교육정보</option><option>대회후기</option><option>신규모집</option><option>방학특강</option></select></label>
+<div class="header">
+  <h1>🧠 생각키움 SNS 매니저</h1>
+  <p>블로그 · 인스타그램 글 자동생성</p>
+</div>
+
+<!-- 페이지 1: 글 생성 -->
+<div class="page active" id="page-write">
+<div class="container">
+
+  <div class="card">
+    <div class="card-title">⚙️ 수업 설정</div>
+
+    <div class="field-group">
+      <label class="field-label">지점</label>
+      <select id="branch">
+        <option value="사우점">사우점</option>
+        <option value="장기점">장기점</option>
+        <option value="구래점">구래점</option>
+        <option value="전체">전체</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">콘텐츠 유형</label>
+      <select id="content_type">
+        <option value="수업후기">수업 후기</option>
+        <option value="대회후기">대회 후기</option>
+        <option value="홍보">홍보글</option>
+        <option value="이벤트">이벤트/공지</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">대상</label>
+      <select id="target">
+        <option value="초등학생">초등학생</option>
+        <option value="유아">유아</option>
+        <option value="초등+유아">초등+유아</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">오늘 수업 내용</label>
+      <textarea id="lesson" placeholder="예) 핀과 포크 전술 배움. 실전 대국 3판. 처음 온 학생도 집중 잘 함. 부모님 문의도 있었음."></textarea>
+    </div>
   </div>
-  <label>대상<select id="target"><option>유아</option><option selected>초등학생</option><option>중학생</option><option>성인</option><option>전체</option></select></label>
-  <label>수업 내용<textarea id="lesson" rows="4" placeholder="예: 포크와 핀을 배우고 실전 대국에서 후보 수 3개를 찾아 이유를 설명함"></textarea></label>
-</section>
 
-<section class="card">
-  <h2>2. 수업사진 보호</h2>
-  <input id="photos" type="file" accept="image/*" multiple>
-  <div id="photoList" class="photos"></div>
-  <div class="row">
-    <button class="secondary" onclick="checkPhotos()">전면 얼굴 판별</button>
-    <button class="primary" onclick="editNeeded()">필요 사진 비식별화</button>
+  <button class="btn-generate" onclick="generate()" id="genBtn">
+    ✨ 블로그 + 인스타 글 생성하기
+  </button>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p>AI가 글을 작성하고 있어요...<br><small style="font-weight:400; color:#94a3b8">약 15~20초 소요됩니다</small></p>
   </div>
-  <p class="hint">원본을 덮어쓰지 않습니다. 편집본은 별도로 만들어집니다.</p>
-</section>
 
-<section class="card">
-  <h2>3. SNS 글 만들기</h2>
-  <button class="primary wide" onclick="generateContent()">블로그 + 인스타 글 생성</button>
-  <div id="keywords" class="chips"></div>
-  <textarea id="result" rows="18" placeholder="생성 결과가 여기에 표시됩니다."></textarea>
-  <div class="row">
-    <button class="secondary" onclick="copyResult()">결과 복사</button>
-    <button class="secondary" onclick="shareResult()">공유하기</button>
+  <!-- 결과 -->
+  <div class="result-section" id="resultSection">
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('blog', this)">📝 블로그</button>
+      <button class="tab-btn" onclick="switchTab('insta', this)">📱 인스타</button>
+      <button class="tab-btn" onclick="switchTab('hash', this)">🏷️ 해시태그</button>
+    </div>
+
+    <!-- 블로그 탭 -->
+    <div class="tab-content active" id="tab-blog">
+      <div class="result-card">
+        <div class="result-header">
+          <span class="result-label">제목 후보</span>
+          <button class="copy-btn" onclick="copyEl('blogTitle', this)">복사</button>
+        </div>
+        <div class="plain-text" id="blogTitle"></div>
+      </div>
+      <div class="result-card">
+        <div class="result-header">
+          <span class="result-label">블로그 본문</span>
+          <button class="copy-btn" onclick="copyEl('blogBody', this)">복사</button>
+        </div>
+        <div class="blog-content" id="blogBody"></div>
+      </div>
+      <div class="result-card">
+        <div class="result-header">
+          <span class="result-label">대표 이미지 문구</span>
+          <button class="copy-btn" onclick="copyEl('imgText', this)">복사</button>
+        </div>
+        <div class="plain-text" id="imgText"></div>
+      </div>
+    </div>
+
+    <!-- 인스타 탭 -->
+    <div class="tab-content" id="tab-insta">
+      <div class="result-card">
+        <div class="result-header">
+          <span class="result-label">인스타그램 글</span>
+          <button class="copy-btn" onclick="copyEl('instaBody', this)">복사</button>
+        </div>
+        <div class="plain-text" id="instaBody"></div>
+      </div>
+    </div>
+
+    <!-- 해시태그 탭 -->
+    <div class="tab-content" id="tab-hash">
+      <div class="result-card">
+        <div class="result-header">
+          <span class="result-label">해시태그</span>
+          <button class="copy-btn" onclick="copyEl('hashTag', this)">복사</button>
+        </div>
+        <div class="hashtag-text" id="hashTag"></div>
+      </div>
+    </div>
   </div>
-</section>
 
-<section class="card">
-  <h2>4. 게시</h2>
-  <div class="row">
-    <a class="linkbtn" href="https://m.blog.naver.com/" target="_blank">네이버 블로그 열기</a>
-    <a class="linkbtn" href="https://www.instagram.com/" target="_blank">인스타그램 열기</a>
+</div>
+</div>
+
+<!-- 페이지 2: 저장된 글 -->
+<div class="page" id="page-history">
+<div class="container">
+  <div class="card" style="margin-top:4px">
+    <div class="card-title">📂 최근 생성 글 (최대 5개)</div>
+    <div id="historyList"></div>
   </div>
-</section>
-</main>
+</div>
+</div>
 
-<div id="busy" class="busy hidden"><div class="spinner"></div><div id="busyText">처리 중...</div></div>
-<script src="/static/app.js"></script>
+<!-- 하단 네비 -->
+<div class="bottom-nav">
+  <button class="nav-btn active" onclick="showPage('write', this)">
+    <span class="nav-icon">✏️</span>글 생성
+  </button>
+  <button class="nav-btn" onclick="showPage('history', this)">
+    <span class="nav-icon">📂</span>저장된 글
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// 페이지 전환
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'history') renderHistory();
+}
+
+// 탭 전환
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// 소제목 굵고 크게 렌더링
+function renderBlogBody(text) {
+  const lines = text.split('\n');
+  return lines.map(line => {
+    const trimmed = line.trim();
+    // **소제목** 패턴
+    if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+      const title = trimmed.slice(2, -2);
+      return `<span class="blog-h2">🔹 ${title}</span>`;
+    }
+    // ## 소제목 패턴
+    if (trimmed.startsWith('## ')) {
+      const title = trimmed.slice(3);
+      return `<span class="blog-h2">🔹 ${title}</span>`;
+    }
+    // # 소제목 패턴
+    if (trimmed.startsWith('# ')) {
+      const title = trimmed.slice(2);
+      return `<span class="blog-h2">🔹 ${title}</span>`;
+    }
+    return line;
+  }).join('\n');
+}
+
+// 글 생성
+async function generate() {
+  const lesson = document.getElementById('lesson').value.trim();
+  if (!lesson) { showToast('수업 내용을 입력해주세요!'); return; }
+
+  document.getElementById('genBtn').disabled = true;
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('resultSection').style.display = 'none';
+
+  const fd = new FormData();
+  fd.append('branch', document.getElementById('branch').value);
+  fd.append('content_type', document.getElementById('content_type').value);
+  fd.append('target', document.getElementById('target').value);
+  fd.append('lesson', lesson);
+
+  try {
+    const res = await fetch('/api/generate', { method: 'POST', body: fd });
+    const data = await res.json();
+    const text = data.text || '';
+
+    // 섹션 파싱
+    const sections = parseResult(text);
+
+    // 블로그 제목
+    document.getElementById('blogTitle').textContent = sections.title;
+    // 블로그 본문 (소제목 강조)
+    document.getElementById('blogBody').innerHTML = renderBlogBody(sections.body);
+    // 대표 이미지 문구
+    document.getElementById('imgText').textContent = sections.imgText;
+    // 인스타
+    document.getElementById('instaBody').textContent = sections.insta;
+    // 해시태그
+    document.getElementById('hashTag').textContent = sections.hash;
+
+    document.getElementById('resultSection').style.display = 'block';
+    document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+
+    // 저장
+    saveHistory({
+      date: new Date().toLocaleString('ko-KR'),
+      branch: document.getElementById('branch').value,
+      lesson: lesson,
+      title: sections.title,
+      body: sections.body,
+      insta: sections.insta,
+      hash: sections.hash,
+      imgText: sections.imgText,
+      raw: text
+    });
+
+  } catch(e) {
+    showToast('오류가 발생했어요. 다시 시도해주세요.');
+  } finally {
+    document.getElementById('genBtn').disabled = false;
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+
+// 결과 파싱
+function parseResult(text) {
+  const get = (start, end) => {
+    const s = text.indexOf(start);
+    if (s === -1) return '';
+    const content = end ? text.substring(s + start.length, text.indexOf(end, s + start.length)) : text.substring(s + start.length);
+    return content.trim();
+  };
+  return {
+    title: get('===제목후보===', '===블로그본문==='),
+    body: get('===블로그본문===', '===인스타그램==='),
+    insta: get('===인스타그램===', '===해시태그==='),
+    hash: get('===해시태그===', '===대표이미지문구==='),
+    imgText: get('===대표이미지문구===', null)
+  };
+}
+
+// 복사
+function copyEl(id, btn) {
+  const el = document.getElementById(id);
+  const text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ 완료';
+    btn.classList.add('copied');
+    showToast('✅ 복사됐어요!');
+    setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// 히스토리 저장
+function saveHistory(item) {
+  let history = JSON.parse(localStorage.getItem('sns_history') || '[]');
+  history.unshift(item);
+  if (history.length > 5) history = history.slice(0, 5);
+  localStorage.setItem('sns_history', JSON.stringify(history));
+}
+
+// 히스토리 렌더링
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  const history = JSON.parse(localStorage.getItem('sns_history') || '[]');
+  if (history.length === 0) {
+    list.innerHTML = '<div class="history-empty">아직 저장된 글이 없어요 😊</div>';
+    return;
+  }
+  list.innerHTML = history.map((item, i) => `
+    <div class="history-item" onclick="loadHistory(${i})">
+      <div class="history-date">${item.date}</div>
+      <div class="history-title">${item.title.split('\n')[0].replace(/^\d+\.\s*/, '')}</div>
+      <div class="history-branch">📍 ${item.branch} · ${item.lesson.slice(0, 20)}${item.lesson.length > 20 ? '...' : ''}</div>
+    </div>
+  `).join('');
+}
+
+// 히스토리 불러오기
+function loadHistory(i) {
+  const history = JSON.parse(localStorage.getItem('sns_history') || '[]');
+  const item = history[i];
+  if (!item) return;
+
+  document.getElementById('branch').value = item.branch;
+  document.getElementById('lesson').value = item.lesson;
+  document.getElementById('blogTitle').textContent = item.title;
+  document.getElementById('blogBody').innerHTML = renderBlogBody(item.body);
+  document.getElementById('instaBody').textContent = item.insta;
+  document.getElementById('hashTag').textContent = item.hash;
+  document.getElementById('imgText').textContent = item.imgText || '';
+  document.getElementById('resultSection').style.display = 'block';
+
+  showPage('write', document.querySelectorAll('.nav-btn')[0]);
+  showToast('✅ 저장된 글을 불러왔어요!');
+  setTimeout(() => document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' }), 300);
+}
+
+// 토스트
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
 </body>
 </html>
