@@ -347,10 +347,13 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
     <div class="field-group">
       <label class="field-label">콘텐츠 유형</label>
       <select id="content_type">
-        <option value="수업후기">수업 후기</option>
-        <option value="대회후기">대회 후기</option>
-        <option value="홍보">홍보글</option>
-        <option value="이벤트">이벤트/공지</option>
+        <option value="수업후기">📚 수업 후기</option>
+        <option value="대회후기">🏆 대회 후기</option>
+        <option value="대회안내">📢 대회 안내</option>
+        <option value="신규모집">🌱 신규 원생 모집</option>
+        <option value="이벤트">🎉 이벤트 / 공지</option>
+        <option value="자격증">🎖️ 자격증 / 급수 과정</option>
+        <option value="체스클럽">♟️ 체스클럽 안내</option>
       </select>
     </div>
 
@@ -619,8 +622,7 @@ function loadHistory(i) {
   const item = history[i];
   if (!item) return;
 
-  document.getElementById('branch').value = item.branch;
-  document.getElementById('lesson').value = item.lesson;
+  // 입력창은 건드리지 않고 결과만 표시
   document.getElementById('blogTitle').textContent = item.title;
   document.getElementById('blogBody').innerHTML = renderBlogBody(item.body);
   document.getElementById('instaBody').textContent = item.insta;
@@ -628,10 +630,20 @@ function loadHistory(i) {
   document.getElementById('imgText').textContent = item.imgText || '';
   document.getElementById('resultSection').style.display = 'block';
 
+  // 저장된 글 정보 표시 (읽기 전용 팝업)
   showPage('write', document.querySelectorAll('.nav-btn')[0]);
-  showToast('✅ 저장된 글을 불러왔어요!');
+  showToast('✅ 저장된 글을 불러왔어요! (입력창은 그대로입니다)');
   setTimeout(() => document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' }), 300);
 }
+
+// 페이지 로드시 입력창 초기화
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('lesson').value = '';
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('branch').selectedIndex = 0;
+  document.getElementById('content_type').selectedIndex = 0;
+  document.getElementById('target').selectedIndex = 0;
+});
 
 // 토스트
 function showToast(msg) {
