@@ -1,5 +1,6 @@
 import os, json, base64, re, uuid
 from pathlib import Path
+from datetime import datetime, timezone, timedelta
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +17,109 @@ app = FastAPI(title="생각키움 SNS 매니저 Mobile")
 app.mount("/static", StaticFiles(directory=BASE/"static"), name="static")
 app.mount("/outputs", StaticFiles(directory=OUT), name="outputs")
 templates = Jinja2Templates(directory=BASE/"templates")
+
+# ──────────────────────────────────────────────────────
+# 한국 날짜 및 학사 일정 유틸
+# ──────────────────────────────────────────────────────
+KST = timezone(timedelta(hours=9))
+
+def get_kst_now() -> datetime:
+    return datetime.now(KST)
+
+def get_school_season(dt: datetime) -> dict:
+    """
+    한국 학사 일정 기준으로 현재 시기를 반환.
+    반환값: {
+        "label": 시기 한글 이름,
+        "allow_new_semester": 새 학기 표현 허용 여부,
+        "description": AI에 전달할 시기 설명
+    }
+    """
+    m, d = dt.month, dt.day
+    # 3월 1~20일: 새 학년 1학기 시작
+    if m == 3 and d <= 20:
+        return {
+            "label": "1학기 시작",
+            "allow_new_semester": True,
+            "description": "3월 초, 새 학년 1학기가 막 시작된 시기입니다."
+        }
+    # 3월 21일 ~ 7월 19일: 1학기 진행 중
+    if (m == 3 and d > 20) or (4 <= m <= 7 and not (m == 7 and d >= 20)):
+        return {
+            "label": "1학기 진행 중",
+            "allow_new_semester": False,
+            "description": f"{m}월, 1학기가 한창 진행 중인 시기입니다."
+        }
+    # 7월 20일 ~ 8월 20일: 여름방학
+    if (m == 7 and d >= 20) or (m == 8 and d <= 20):
+        return {
+            "label": "여름방학",
+            "allow_new_semester": False,
+            "description": f"{m}월, 여름방학 기간입니다."
+        }
+    # 8월 21일 ~ 9월 10일: 2학기 시작
+    if (m == 8 and d > 20) or (m == 9 and d <= 10):
+        return {
+            "label": "2학기 시작",
+            "allow_new_semester": True,
+            "description": "8월 말~9월 초, 2학기가 막 시작된 시기입니다."
+        }
+    # 9월 11일 ~ 12월 19일: 2학기 진행 중
+    if (m == 9 and d > 10) or (10 <= m <= 12 and not (m == 12 and d >= 20)):
+        return {
+            "label": "2학기 진행 중",
+            "allow_new_semester": False,
+            "description": f"{m}월, 2학기가 진행 중인 시기입니다."
+        }
+    # 12월 20일 ~ 2월: 겨울방학·새 학년 준비
+    return {
+        "label": "겨울방학/새 학년 준비",
+        "allow_new_semester": False,
+        "description": f"{m}월, 겨울방학 및 새 학년 준비 시기입니다."
+    }
+
+# 새 학기 관련 부적절 표현 패턴
+NEW_SEMESTER_PATTERNS = [
+    r"새\s*학기\s*(가|를|에|이|은|도|부터|를\s*맞아|가\s*시작)",
+    r"새\s*학기",
+    r"새학기",
+    r"신학기",
+    r"새\s*학년\s*(이|을|에|도|이\s*시작)",
+    r"학기\s*가\s*시작되는",
+    r"새\s*학기를\s*맞아",
+    r"새\s*학기\s*시작",
+]
+
+def has_new_semester_phrase(text: str) -> bool:
+    """새 학기 관련 표현이 포함돼 있는지 검사"""
+    for pat in NEW_SEMESTER_PATTERNS:
+        if re.search(pat, text):
+            return True
+    return False
+
+def fix_new_semester_phrase(text: str, season_label: str) -> str:
+    """
+    새 학기 표현을 시기에 맞는 자연스러운 표현으로 교체.
+    단순 삭제가 아닌 문맥에 맞는 대체 표현 사용.
+    """
+    replacements = {
+        r"새\s*학기를\s*맞아": f"{season_label}을 맞아",
+        r"새\s*학기\s*시작을\s*앞두고": f"{season_label} 시기를 앞두고",
+        r"새\s*학기가\s*시작되는\s*지금": f"지금 이 시기",
+        r"새\s*학기\s*시작": f"{season_label}",
+        r"새\s*학기를\s*준비하는": "앞으로를 준비하는",
+        r"새\s*학기": f"이번 {season_label}",
+        r"새학기": f"이번 {season_label}",
+        r"신학기": f"이번 {season_label}",
+        r"새\s*학년\s*이\s*시작": f"{season_label} 시작",
+        r"새\s*학년을\s*맞아": f"{season_label}을 맞아",
+        r"새\s*학년": f"이번 학기",
+        r"학기가\s*시작되는": "수업이 이어지는",
+    }
+    result = text
+    for pat, rep in replacements.items():
+        result = re.sub(pat, rep, result)
+    return result
 
 # ──────────────────────────────────────────────────────
 # 지점별 지역 검색 전략
@@ -475,6 +579,23 @@ async def generate(
     chess_term_section = build_chess_term_section(lesson)
     area_desc = BRANCH_AREA.get(branch, "김포")
 
+    # ── 한국 날짜 및 학사 일정 판단 ──────────────────
+    now_kst = get_kst_now()
+    season = get_school_season(now_kst)
+    date_str = now_kst.strftime("%Y년 %m월 %d일")
+    weekday_names = ["월", "화", "수", "목", "금", "토", "일"]
+    weekday_str = weekday_names[now_kst.weekday()]
+
+    # 구래점 개원 여부 (2026-10-18)
+    gurai_open_date = datetime(2026, 10, 18, tzinfo=KST)  # type: ignore[arg-type]
+    gurai_opened = now_kst >= gurai_open_date
+    gurai_note = ""
+    if branch == "구래점":
+        if gurai_opened:
+            gurai_note = "\n[구래점 안내] 구래점은 이미 개원했습니다. 개원 예정 문구나 미래형 표현을 사용하지 마세요.\n"
+        else:
+            gurai_note = "\n[구래점 안내] 구래점은 2026년 10월 18일 개원 예정입니다. 개원 준비/오픈 예정 표현은 적절합니다.\n"
+
     system_prompt = (
         "당신은 생각키움연구소의 원장입니다. "
         "유아교육 전문가 자격을 갖춘 10년 경력의 사고력체스 교육자로, "
@@ -514,7 +635,13 @@ async def generate(
         "② 여러 지역명을 한 글에 혼합하지 말 것 "
         "③ 같은 키워드 3번 이상 반복 금지 "
         "④ 실제 수업 내용 외 없었던 사실을 만들어내지 말 것 "
-        "⑤ 과장된 교육 효과 표현 금지"
+        "⑤ 과장된 교육 효과 표현 금지\n\n"
+        "[날짜·학사일정 원칙 — 반드시 준수]\n"
+        f"현재 날짜: {date_str} ({weekday_str}요일), 한국 표준시(KST) 기준.\n"
+        f"현재 학사 시기: {season['label']} — {season['description']}\n"
+        f"'새 학기', '새학기', '신학기', '새 학년', '학기가 시작되는' 등의 표현 허용 여부: "
+        f"{'허용' if season['allow_new_semester'] else '금지 — 현재는 ' + season['label'] + ' 시기이므로 이 표현을 절대 사용하지 마세요'}.\n"
+        "날짜는 AI가 추측하지 않으며, 위에 명시된 날짜를 사용합니다."
     )
 
     target_section = f"\n[대상별 강조점]\n{target_ctx}" if target_ctx else ""
@@ -536,6 +663,10 @@ async def generate(
 - 콘텐츠 유형: {content_type}
 - 대상: {target}
 - 내용/메모: {lesson}
+- 오늘 날짜 (KST): {date_str} ({weekday_str}요일)
+- 현재 학사 시기: {season['label']} — {season['description']}
+- 새 학기/새학기/신학기/새 학년 표현: {'허용' if season['allow_new_semester'] else '사용 금지'}
+{gurai_note}
 
 [SEO 키워드 활용]
 - 제목에 반드시 포함: "{title_keyword}"
@@ -593,16 +724,46 @@ async def generate(
 """
 
     c = get_client()
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": prompt}
+    ]
     r = c.chat.completions.create(
         model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt}
-        ],
+        messages=messages,
         max_tokens=3000,
         temperature=0.9
     )
-    return {"text": r.choices[0].message.content.strip(), "keywords": kws}
+    result_text = r.choices[0].message.content.strip()
+
+    # ── 사후 검증: 새 학기 표현 오류 검사 및 수정 ───────
+    if not season["allow_new_semester"] and has_new_semester_phrase(result_text):
+        # 1차 시도: 자동 치환
+        fixed_text = fix_new_semester_phrase(result_text, season["label"])
+
+        # 치환 후에도 남아 있으면 AI에게 재수정 요청 (1회)
+        if has_new_semester_phrase(fixed_text):
+            fix_prompt = (
+                f"아래 글에 '새 학기', '새학기', '신학기', '새 학년', '학기가 시작되는' 등의 표현이 포함되어 있습니다.\n"
+                f"현재는 {season['label']} 시기({date_str})이므로 이 표현은 부적절합니다.\n"
+                f"해당 표현이 포함된 문장 전체를 자연스럽게 다시 써서, 동일한 출력 형식을 유지하며 반환하세요.\n"
+                f"===제목후보===, ===블로그본문=== 등 구분자와 내용 구조는 그대로 유지하세요.\n\n"
+                f"--- 수정할 글 ---\n{fixed_text}"
+            )
+            r2 = c.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": fix_prompt}
+                ],
+                max_tokens=3000,
+                temperature=0.7
+            )
+            result_text = r2.choices[0].message.content.strip()
+        else:
+            result_text = fixed_text
+
+    return {"text": result_text, "keywords": kws}
 
 
 @app.post("/api/privacy-check")
