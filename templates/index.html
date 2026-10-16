@@ -119,20 +119,23 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
   padding: 5px;
   margin-bottom: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  gap: 4px;
+  gap: 3px;
+  overflow-x: auto;
 }
 .tab-btn {
   flex: 1;
-  padding: 10px;
+  min-width: 0;
+  padding: 9px 6px;
   border: none;
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 800;
   font-family: 'Nanum Square', sans-serif;
   cursor: pointer;
   background: transparent;
   color: #94a3b8;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 .tab-btn.active {
   background: linear-gradient(135deg, #3B5BDB, #4C6EF5);
@@ -217,10 +220,74 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
   border-color: #86efac;
 }
 
-/* 저장된 글 섹션 */
-.history-section {
-  margin-top: 4px;
+/* SEO 점수 카드 */
+.seo-score-wrap { }
+.seo-total {
+  text-align: center;
+  padding: 16px 0 12px;
 }
+.seo-total .score-num {
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1;
+}
+.seo-total .score-label {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+  font-weight: 700;
+}
+.score-bar-wrap {
+  margin: 10px 0 6px;
+  background: #e2e8f0;
+  border-radius: 8px;
+  height: 10px;
+  overflow: hidden;
+}
+.score-bar-fill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 0.8s ease;
+}
+.seo-items { margin-top: 10px; }
+.seo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+}
+.seo-item:last-child { border-bottom: none; }
+.seo-item-name { font-weight: 800; color: #374151; min-width: 100px; flex-shrink: 0; }
+.seo-item-score { font-weight: 800; min-width: 36px; flex-shrink: 0; }
+.seo-item-comment { color: #64748b; line-height: 1.5; }
+.seo-improve {
+  background: #fef9c3;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #713f12;
+}
+.seo-improve strong { display: block; font-weight: 800; margin-bottom: 4px; }
+
+/* 추천 제목 강조 */
+.title-recommend {
+  background: #eff6ff;
+  border-left: 3px solid #3B5BDB;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: #1d4ed8;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+/* 저장된 글 섹션 */
+.history-section { margin-top: 4px; }
 .history-item {
   background: white;
   border-radius: 12px;
@@ -232,30 +299,59 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
   border-left: 3px solid #3B5BDB;
 }
 .history-item:active { transform: scale(0.99); }
-.history-date {
-  font-size: 11px;
-  color: #94a3b8;
-  font-weight: 700;
-  margin-bottom: 4px;
+.history-date { font-size: 11px; color: #94a3b8; font-weight: 700; margin-bottom: 4px; }
+.history-title { font-size: 14px; font-weight: 800; color: #1e293b; margin-bottom: 3px; }
+.history-branch { font-size: 12px; color: #3B5BDB; font-weight: 700; }
+.history-empty { text-align: center; padding: 30px; color: #94a3b8; font-size: 14px; font-weight: 700; }
+
+/* 네이버 검색 최적화 탭 */
+.seo-manage-card {
+  background: white;
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
-.history-title {
-  font-size: 14px;
-  font-weight: 800;
-  color: #1e293b;
-  margin-bottom: 3px;
+.seo-manage-card h3 {
+  font-size: 14px; font-weight: 800; color: #1e293b; margin-bottom: 12px;
 }
-.history-branch {
-  font-size: 12px;
-  color: #3B5BDB;
-  font-weight: 700;
+.kw-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.kw-table th {
+  background: #f8fafc; padding: 8px 10px; text-align: left;
+  font-weight: 800; color: #64748b; border-bottom: 2px solid #e2e8f0;
 }
-.history-empty {
-  text-align: center;
-  padding: 30px;
-  color: #94a3b8;
-  font-size: 14px;
-  font-weight: 700;
+.kw-table td {
+  padding: 9px 10px; border-bottom: 1px solid #f1f5f9;
+  color: #374151; vertical-align: top;
 }
+.kw-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 20px;
+  font-size: 11px; font-weight: 800;
+}
+.kw-badge.high { background: #dcfce7; color: #166534; }
+.kw-badge.mid  { background: #fef9c3; color: #713f12; }
+.kw-badge.low  { background: #fee2e2; color: #991b1b; }
+
+.post-log-form { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.post-log-form input {
+  padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 14px; font-family: 'Nanum Square', sans-serif; color: #1e293b;
+  background: #fafafa; outline: none;
+}
+.post-log-form input:focus { border-color: #3B5BDB; background: white; }
+.btn-small {
+  padding: 9px 16px; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 800; font-family: 'Nanum Square', sans-serif;
+  cursor: pointer; background: #3B5BDB; color: white;
+}
+.log-list { margin-top: 12px; }
+.log-item {
+  background: #f8fafc; border-radius: 10px; padding: 12px 14px;
+  margin-bottom: 8px; font-size: 13px; line-height: 1.7;
+}
+.log-item .log-title { font-weight: 800; color: #1e293b; margin-bottom: 2px; }
+.log-item .log-meta { color: #64748b; font-size: 12px; }
+.log-item .log-kw { color: #3B5BDB; font-weight: 700; }
 
 /* 하단 네비 */
 .bottom-nav {
@@ -273,7 +369,7 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
   border: none;
   background: transparent;
   font-family: 'Nanum Square', sans-serif;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: #94a3b8;
   cursor: pointer;
@@ -324,7 +420,7 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
 
 <div class="header">
   <h1>🧠 생각키움 SNS 매니저</h1>
-  <p>블로그 · 인스타그램 글 자동생성</p>
+  <p>블로그 · 인스타그램 글 자동생성 · 검색 최적화</p>
 </div>
 
 <!-- 페이지 1: 글 생성 -->
@@ -386,7 +482,7 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
 
   <div class="loading" id="loading">
     <div class="spinner"></div>
-    <p>AI가 글을 작성하고 있어요...<br><small style="font-weight:400; color:#94a3b8">약 15~20초 소요됩니다</small></p>
+    <p>AI가 글을 작성하고 있어요...<br><small style="font-weight:400; color:#94a3b8" id="loadingMsg">처음 실행 시 서버 깨우는 시간 포함 최대 1분 소요</small></p>
   </div>
 
   <!-- 결과 -->
@@ -395,16 +491,18 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
       <button class="tab-btn active" onclick="switchTab('blog', this)">📝 블로그</button>
       <button class="tab-btn" onclick="switchTab('insta', this)">📱 인스타</button>
       <button class="tab-btn" onclick="switchTab('hash', this)">🏷️ 해시태그</button>
+      <button class="tab-btn" onclick="switchTab('seo', this)">📊 SEO점수</button>
     </div>
 
     <!-- 블로그 탭 -->
     <div class="tab-content active" id="tab-blog">
       <div class="result-card">
         <div class="result-header">
-          <span class="result-label">제목 후보</span>
+          <span class="result-label">제목 후보 5가지</span>
           <button class="copy-btn" onclick="copyEl('blogTitle', this)">복사</button>
         </div>
         <div class="plain-text" id="blogTitle"></div>
+        <div class="title-recommend" id="titleRecommend"></div>
       </div>
       <div class="result-card">
         <div class="result-header">
@@ -443,6 +541,32 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
         <div class="hashtag-text" id="hashTag"></div>
       </div>
     </div>
+
+    <!-- SEO 점수 탭 -->
+    <div class="tab-content" id="tab-seo">
+      <div class="result-card">
+        <div class="result-header">
+          <span class="result-label">📊 SEO 품질 점수</span>
+        </div>
+        <div class="seo-score-wrap">
+          <div class="seo-total">
+            <div class="score-num" id="seoScoreNum" style="color:#3B5BDB">-</div>
+            <div class="score-label">/ 100점</div>
+            <div class="score-bar-wrap">
+              <div class="score-bar-fill" id="seoBarFill" style="width:0%; background:#3B5BDB;"></div>
+            </div>
+          </div>
+          <div class="seo-items" id="seoItems"></div>
+          <div class="seo-improve" id="seoImprove" style="display:none">
+            <strong>💡 개선 권장사항</strong>
+            <span id="seoImproveText"></span>
+          </div>
+        </div>
+        <p style="font-size:11px;color:#94a3b8;margin-top:12px;line-height:1.6">
+          ※ 이 점수는 내부 품질 기준이며, 네이버 공식 SEO 점수나 검색 상위 노출 확률이 아닙니다.
+        </p>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -458,6 +582,79 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
 </div>
 </div>
 
+<!-- 페이지 3: 네이버 검색 최적화 -->
+<div class="page" id="page-seo">
+<div class="container" style="margin-top:4px">
+
+  <!-- 우선 관리 검색어 -->
+  <div class="seo-manage-card">
+    <h3>🎯 우선 관리 검색어</h3>
+    <div style="overflow-x:auto">
+    <table class="kw-table">
+      <thead>
+        <tr>
+          <th>검색어</th>
+          <th>중요도</th>
+          <th>관련 지점</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>장기동체스</td><td><span class="kw-badge high">높음</span></td><td>장기점</td></tr>
+        <tr><td>장기동체스학원</td><td><span class="kw-badge high">높음</span></td><td>장기점</td></tr>
+        <tr><td>운양동체스</td><td><span class="kw-badge high">높음</span></td><td>장기점</td></tr>
+        <tr><td>운양동체스학원</td><td><span class="kw-badge high">높음</span></td><td>장기점</td></tr>
+        <tr><td>구래동체스</td><td><span class="kw-badge high">높음</span></td><td>구래점</td></tr>
+        <tr><td>구래동체스학원</td><td><span class="kw-badge high">높음</span></td><td>구래점</td></tr>
+        <tr><td>풍무동체스</td><td><span class="kw-badge mid">보통</span></td><td>사우점</td></tr>
+        <tr><td>풍무동체스학원</td><td><span class="kw-badge mid">보통</span></td><td>사우점</td></tr>
+        <tr><td>걸포동체스</td><td><span class="kw-badge mid">보통</span></td><td>사우점</td></tr>
+        <tr><td>걸포동체스학원</td><td><span class="kw-badge mid">보통</span></td><td>사우점</td></tr>
+        <tr><td>사우동체스</td><td><span class="kw-badge mid">보통</span></td><td>사우점</td></tr>
+        <tr><td>김포체스학원</td><td><span class="kw-badge high">높음</span></td><td>전체</td></tr>
+        <tr><td>김포사고력체스</td><td><span class="kw-badge high">높음</span></td><td>전체</td></tr>
+        <tr><td>어린이체스대회</td><td><span class="kw-badge high">높음</span></td><td>전체</td></tr>
+        <tr><td>김포체스대회</td><td><span class="kw-badge high">높음</span></td><td>전체</td></tr>
+        <tr><td>노비스체스대회</td><td><span class="kw-badge mid">보통</span></td><td>전체</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="font-size:12px;color:#94a3b8;margin-top:10px;line-height:1.6">
+      ※ 실제 학원이 위치하지 않은 지역 키워드는 사용하지 않습니다.
+    </p>
+  </div>
+
+  <!-- 발행 기록 -->
+  <div class="seo-manage-card">
+    <h3>📋 발행 기록 관리</h3>
+    <div class="post-log-form">
+      <input type="text" id="logKeyword" placeholder="목표 검색어 (예: 장기동체스학원)">
+      <input type="text" id="logTitle" placeholder="게시물 제목">
+      <input type="text" id="logUrl" placeholder="블로그 URL (선택)">
+      <input type="date" id="logDate">
+      <button class="btn-small" onclick="addLog()">+ 기록 추가</button>
+    </div>
+    <div class="log-list" id="logList"></div>
+  </div>
+
+  <!-- 콘텐츠 기획 가이드 -->
+  <div class="seo-manage-card">
+    <h3>💡 검색어별 콘텐츠 기획 가이드</h3>
+    <div style="font-size:13px;line-height:1.9;color:#374151">
+      <p style="font-weight:800;color:#3B5BDB;margin-bottom:6px">📌 같은 키워드라도 매번 다른 각도로</p>
+      <p>① <b>학부모 궁금증 해결형</b> — "체스, 몇 살부터 시작하면 좋을까요?"</p>
+      <p>② <b>수업 현장 스토리형</b> — 오늘 수업에서 있었던 실제 장면</p>
+      <p>③ <b>교육 효과 심층형</b> — 사고력·집중력이 어떻게 자라는지</p>
+      <p>④ <b>대회·성과형</b> — 대회 준비 과정, 참가 후기, 성장 스토리</p>
+      <p>⑤ <b>학원 소개형</b> — 생각키움연구소만의 수업 방식과 차별점</p>
+      <p style="margin-top:10px;color:#64748b;font-size:12px">
+        ※ 무의미한 글 대량 생성보다 실제 검색 유입과 상담으로 이어지는<br>고품질 게시물을 우선합니다.
+      </p>
+    </div>
+  </div>
+
+</div>
+</div>
+
 <!-- 하단 네비 -->
 <div class="bottom-nav">
   <button class="nav-btn active" onclick="showPage('write', this)">
@@ -465,6 +662,9 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
   </button>
   <button class="nav-btn" onclick="showPage('history', this)">
     <span class="nav-icon">📂</span>저장된 글
+  </button>
+  <button class="nav-btn" onclick="showPage('seo', this)">
+    <span class="nav-icon">🔍</span>검색 최적화
   </button>
 </div>
 
@@ -478,6 +678,7 @@ function showPage(name, btn) {
   document.getElementById('page-' + name).classList.add('active');
   btn.classList.add('active');
   if (name === 'history') renderHistory();
+  if (name === 'seo') renderLog();
 }
 
 // 탭 전환
@@ -493,26 +694,111 @@ function renderBlogBody(text) {
   const lines = text.split('\n');
   return lines.map(line => {
     const trimmed = line.trim();
-    // **소제목** 패턴
     if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
       const title = trimmed.slice(2, -2);
       return `<span class="blog-h2">🔹 ${title}</span>`;
     }
-    // ## 소제목 패턴
     if (trimmed.startsWith('## ')) {
-      const title = trimmed.slice(3);
-      return `<span class="blog-h2">🔹 ${title}</span>`;
+      return `<span class="blog-h2">🔹 ${trimmed.slice(3)}</span>`;
     }
-    // # 소제목 패턴
     if (trimmed.startsWith('# ')) {
-      const title = trimmed.slice(2);
-      return `<span class="blog-h2">🔹 ${title}</span>`;
+      return `<span class="blog-h2">🔹 ${trimmed.slice(2)}</span>`;
     }
     return line;
   }).join('\n');
 }
 
-// 글 생성
+// 로딩 메시지 교체 (30초 후 안내)
+let loadingTimer = null;
+function startLoadingMsg() {
+  loadingTimer = setTimeout(() => {
+    const el = document.getElementById('loadingMsg');
+    if (el) el.textContent = '서버를 깨우는 중입니다. 조금만 더 기다려주세요... ⏳';
+  }, 30000);
+}
+function stopLoadingMsg() {
+  clearTimeout(loadingTimer);
+  const el = document.getElementById('loadingMsg');
+  if (el) el.textContent = '처음 실행 시 서버 깨우는 시간 포함 최대 1분 소요';
+}
+
+// SEO 점수 파싱 및 렌더링
+function parseSeoScore(text) {
+  const section = (() => {
+    const s = text.indexOf('===SEO품질점수===');
+    if (s === -1) return '';
+    return text.substring(s + '===SEO품질점수==='.length).trim();
+  })();
+  if (!section) return null;
+
+  // 총점 추출
+  const totalMatch = section.match(/총점[:\s]*(\d+)점/);
+  const total = totalMatch ? parseInt(totalMatch[1]) : null;
+
+  // 항목별 추출
+  const itemNames = ['검색의도적합성','지역관련성','제목본문일치','정보구체성','문장반복여부','키워드적정사용','체스전문용어정확성','교육효과표현','학부모유용정보','상담연결명확성'];
+  const items = [];
+  for (const name of itemNames) {
+    const re = new RegExp(name + '[:\\s]*([0-9]+)점[\\s—-]*([^\n]*)');
+    const m = section.match(re);
+    if (m) items.push({ name, score: parseInt(m[1]), comment: m[2].trim() });
+  }
+
+  // 개선권장 추출
+  const improveMatch = section.match(/개선권장[:\s]*([^\n]+(?:\n[^\n=]+)*)/);
+  const improve = improveMatch ? improveMatch[1].trim() : '';
+
+  return { total, items, improve };
+}
+
+function renderSeoScore(seoData) {
+  if (!seoData || seoData.total === null) {
+    document.getElementById('seoScoreNum').textContent = '-';
+    document.getElementById('seoItems').innerHTML = '<p style="color:#94a3b8;font-size:13px">점수 정보를 불러오지 못했습니다.</p>';
+    return;
+  }
+  const score = seoData.total;
+  const color = score >= 80 ? '#16a34a' : score >= 60 ? '#d97706' : '#dc2626';
+
+  document.getElementById('seoScoreNum').textContent = score;
+  document.getElementById('seoScoreNum').style.color = color;
+  const bar = document.getElementById('seoBarFill');
+  bar.style.background = color;
+  setTimeout(() => { bar.style.width = score + '%'; }, 100);
+
+  const itemsHtml = seoData.items.map(item => {
+    const c = item.score >= 8 ? '#16a34a' : item.score >= 6 ? '#d97706' : '#dc2626';
+    return `<div class="seo-item">
+      <span class="seo-item-name">${item.name}</span>
+      <span class="seo-item-score" style="color:${c}">${item.score}점</span>
+      <span class="seo-item-comment">${item.comment}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('seoItems').innerHTML = itemsHtml;
+
+  if (seoData.improve && seoData.improve.length > 3) {
+    document.getElementById('seoImprove').style.display = 'block';
+    document.getElementById('seoImproveText').textContent = seoData.improve;
+  } else {
+    document.getElementById('seoImprove').style.display = 'none';
+  }
+}
+
+// 추천 제목 파싱
+function parseTitleRecommend(titleText) {
+  const lines = titleText.split('\n');
+  for (const line of lines) {
+    if (line.trim().startsWith('추천:')) {
+      return line.trim().replace('추천:', '').trim();
+    }
+    if (line.trim().match(/^추천\s*[:：]/)) {
+      return line.trim().replace(/^추천\s*[:：]/, '').trim();
+    }
+  }
+  return '';
+}
+
+// 글 생성 (120초 타임아웃 포함)
 async function generate() {
   const lesson = document.getElementById('lesson').value.trim();
   if (!lesson) { showToast('수업 내용을 입력해주세요!'); return; }
@@ -520,6 +806,7 @@ async function generate() {
   document.getElementById('genBtn').disabled = true;
   document.getElementById('loading').style.display = 'block';
   document.getElementById('resultSection').style.display = 'none';
+  startLoadingMsg();
 
   const fd = new FormData();
   fd.append('branch', document.getElementById('branch').value);
@@ -527,17 +814,30 @@ async function generate() {
   fd.append('target', document.getElementById('target').value);
   fd.append('lesson', lesson);
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000);
+
   try {
-    const res = await fetch('/api/generate', { method: 'POST', body: fd });
+    const res = await fetch('/api/generate', { method: 'POST', body: fd, signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await res.json();
     const text = data.text || '';
 
     // 섹션 파싱
     const sections = parseResult(text);
 
-    // 블로그 제목
+    // 블로그 제목 (추천 제목 분리)
     document.getElementById('blogTitle').textContent = sections.title;
-    // 블로그 본문 (소제목 강조)
+    const recommend = parseTitleRecommend(sections.title);
+    const recEl = document.getElementById('titleRecommend');
+    if (recommend) {
+      recEl.textContent = '⭐ 추천: ' + recommend;
+      recEl.style.display = 'block';
+    } else {
+      recEl.style.display = 'none';
+    }
+
+    // 블로그 본문
     document.getElementById('blogBody').innerHTML = renderBlogBody(sections.body);
     // 대표 이미지 문구
     document.getElementById('imgText').textContent = sections.imgText;
@@ -545,6 +845,10 @@ async function generate() {
     document.getElementById('instaBody').textContent = sections.insta;
     // 해시태그
     document.getElementById('hashTag').textContent = sections.hash;
+
+    // SEO 점수
+    const seoData = parseSeoScore(text);
+    renderSeoScore(seoData);
 
     document.getElementById('resultSection').style.display = 'block';
     document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
@@ -559,12 +863,19 @@ async function generate() {
       insta: sections.insta,
       hash: sections.hash,
       imgText: sections.imgText,
+      seo: seoData,
       raw: text
     });
 
   } catch(e) {
-    showToast('오류가 발생했어요. 다시 시도해주세요.');
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') {
+      showToast('서버 응답 시간이 초과됐습니다. 다시 시도해주세요.');
+    } else {
+      showToast('오류가 발생했어요. 다시 시도해주세요.');
+    }
   } finally {
+    stopLoadingMsg();
     document.getElementById('genBtn').disabled = false;
     document.getElementById('loading').style.display = 'none';
   }
@@ -579,11 +890,11 @@ function parseResult(text) {
     return content.trim();
   };
   return {
-    title: get('===제목후보===', '===블로그본문==='),
-    body: get('===블로그본문===', '===인스타그램==='),
-    insta: get('===인스타그램===', '===해시태그==='),
-    hash: get('===해시태그===', '===대표이미지문구==='),
-    imgText: get('===대표이미지문구===', null)
+    title:   get('===제목후보===', '===블로그본문==='),
+    body:    get('===블로그본문===', '===인스타그램==='),
+    insta:   get('===인스타그램===', '===해시태그==='),
+    hash:    get('===해시태그===', '===대표이미지문구==='),
+    imgText: get('===대표이미지문구===', '===SEO품질점수==='),
   };
 }
 
@@ -596,61 +907,141 @@ function copyEl(id, btn) {
     btn.classList.add('copied');
     showToast('✅ 복사됐어요!');
     setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('copied'); }, 2000);
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('✅ 복사됐어요!');
   });
 }
 
 // 히스토리 저장
 function saveHistory(item) {
-  let history = JSON.parse(localStorage.getItem('sns_history') || '[]');
-  history.unshift(item);
-  if (history.length > 5) history = history.slice(0, 5);
-  localStorage.setItem('sns_history', JSON.stringify(history));
+  try {
+    let history = JSON.parse(localStorage.getItem('sns_history') || '[]');
+    history.unshift(item);
+    if (history.length > 5) history = history.slice(0, 5);
+    localStorage.setItem('sns_history', JSON.stringify(history));
+  } catch(e) {}
 }
 
 // 히스토리 렌더링
 function renderHistory() {
   const list = document.getElementById('historyList');
-  const history = JSON.parse(localStorage.getItem('sns_history') || '[]');
-  if (history.length === 0) {
-    list.innerHTML = '<div class="history-empty">아직 저장된 글이 없어요 😊</div>';
-    return;
+  try {
+    const history = JSON.parse(localStorage.getItem('sns_history') || '[]');
+    if (history.length === 0) {
+      list.innerHTML = '<div class="history-empty">아직 저장된 글이 없어요 😊</div>';
+      return;
+    }
+    list.innerHTML = history.map((item, i) => `
+      <div class="history-item" onclick="loadHistory(${i})">
+        <div class="history-date">${item.date}</div>
+        <div class="history-title">${(item.title||'').split('\n')[0].replace(/^\d+\.\s*/, '').slice(0,40)}</div>
+        <div class="history-branch">📍 ${item.branch} · ${(item.lesson||'').slice(0, 20)}${(item.lesson||'').length > 20 ? '...' : ''}
+          ${item.seo && item.seo.total ? `<span class="badge">SEO ${item.seo.total}점</span>` : ''}
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    list.innerHTML = '<div class="history-empty">저장 기록을 불러올 수 없습니다.</div>';
   }
-  list.innerHTML = history.map((item, i) => `
-    <div class="history-item" onclick="loadHistory(${i})">
-      <div class="history-date">${item.date}</div>
-      <div class="history-title">${item.title.split('\n')[0].replace(/^\d+\.\s*/, '')}</div>
-      <div class="history-branch">📍 ${item.branch} · ${item.lesson.slice(0, 20)}${item.lesson.length > 20 ? '...' : ''}</div>
-    </div>
-  `).join('');
 }
 
 // 히스토리 불러오기
 function loadHistory(i) {
-  const history = JSON.parse(localStorage.getItem('sns_history') || '[]');
-  const item = history[i];
-  if (!item) return;
+  try {
+    const history = JSON.parse(localStorage.getItem('sns_history') || '[]');
+    const item = history[i];
+    if (!item) return;
 
-  // 입력창은 건드리지 않고 결과만 표시
-  document.getElementById('blogTitle').textContent = item.title;
-  document.getElementById('blogBody').innerHTML = renderBlogBody(item.body);
-  document.getElementById('instaBody').textContent = item.insta;
-  document.getElementById('hashTag').textContent = item.hash;
-  document.getElementById('imgText').textContent = item.imgText || '';
-  document.getElementById('resultSection').style.display = 'block';
+    document.getElementById('blogTitle').textContent = item.title;
+    document.getElementById('blogBody').innerHTML = renderBlogBody(item.body);
+    document.getElementById('instaBody').textContent = item.insta;
+    document.getElementById('hashTag').textContent = item.hash;
+    document.getElementById('imgText').textContent = item.imgText || '';
+    if (item.seo) renderSeoScore(item.seo);
 
-  // 저장된 글 정보 표시 (읽기 전용 팝업)
-  showPage('write', document.querySelectorAll('.nav-btn')[0]);
-  showToast('✅ 저장된 글을 불러왔어요! (입력창은 그대로입니다)');
-  setTimeout(() => document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' }), 300);
+    const recEl = document.getElementById('titleRecommend');
+    const recommend = parseTitleRecommend(item.title || '');
+    if (recommend) { recEl.textContent = '⭐ 추천: ' + recommend; recEl.style.display = 'block'; }
+    else { recEl.style.display = 'none'; }
+
+    document.getElementById('resultSection').style.display = 'block';
+    showPage('write', document.querySelectorAll('.nav-btn')[0]);
+    showToast('✅ 저장된 글을 불러왔어요!');
+    setTimeout(() => document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' }), 300);
+  } catch(e) {}
 }
 
-// 페이지 로드시 입력창 초기화
+// 발행 기록 추가
+function addLog() {
+  const kw = document.getElementById('logKeyword').value.trim();
+  const title = document.getElementById('logTitle').value.trim();
+  const url = document.getElementById('logUrl').value.trim();
+  const date = document.getElementById('logDate').value;
+  if (!kw || !title) { showToast('검색어와 제목을 입력해주세요.'); return; }
+
+  try {
+    let logs = JSON.parse(localStorage.getItem('seo_logs') || '[]');
+    logs.unshift({ kw, title, url, date: date || new Date().toISOString().slice(0,10), added: new Date().toLocaleString('ko-KR') });
+    if (logs.length > 30) logs = logs.slice(0, 30);
+    localStorage.setItem('seo_logs', JSON.stringify(logs));
+    document.getElementById('logKeyword').value = '';
+    document.getElementById('logTitle').value = '';
+    document.getElementById('logUrl').value = '';
+    document.getElementById('logDate').value = '';
+    renderLog();
+    showToast('✅ 기록이 추가됐어요!');
+  } catch(e) {}
+}
+
+// 발행 기록 렌더링
+function renderLog() {
+  const list = document.getElementById('logList');
+  try {
+    const logs = JSON.parse(localStorage.getItem('seo_logs') || '[]');
+    if (logs.length === 0) {
+      list.innerHTML = '<p style="font-size:13px;color:#94a3b8;padding:10px 0">아직 기록이 없습니다.</p>';
+      return;
+    }
+    list.innerHTML = logs.map((log, i) => `
+      <div class="log-item">
+        <div class="log-title">${log.title}</div>
+        <div class="log-meta">
+          <span class="log-kw">#${log.kw}</span> · 발행일: ${log.date}
+          ${log.url ? ` · <a href="${log.url}" target="_blank" style="color:#3B5BDB">블로그 링크</a>` : ''}
+          <span onclick="deleteLog(${i})" style="color:#ef4444;cursor:pointer;margin-left:8px">삭제</span>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    list.innerHTML = '';
+  }
+}
+
+function deleteLog(i) {
+  try {
+    let logs = JSON.parse(localStorage.getItem('seo_logs') || '[]');
+    logs.splice(i, 1);
+    localStorage.setItem('seo_logs', JSON.stringify(logs));
+    renderLog();
+  } catch(e) {}
+}
+
+// 페이지 로드시 초기화
 window.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('lesson').value = '';
-  document.getElementById('resultSection').style.display = 'none';
-  document.getElementById('branch').selectedIndex = 0;
-  document.getElementById('content_type').selectedIndex = 0;
-  document.getElementById('target').selectedIndex = 0;
+  try {
+    document.getElementById('lesson').value = '';
+    document.getElementById('resultSection').style.display = 'none';
+    document.getElementById('branch').selectedIndex = 0;
+    document.getElementById('content_type').selectedIndex = 0;
+    document.getElementById('target').selectedIndex = 0;
+  } catch(e) {}
 });
 
 // 토스트
