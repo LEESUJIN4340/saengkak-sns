@@ -414,6 +414,157 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
   color: #1d4ed8;
   margin-left: 6px;
 }
+
+/* ── 이미지 기획 기능 ── */
+.img-plan-trigger {
+  width: 100%;
+  padding: 13px;
+  margin-top: 10px;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  font-family: 'Nanum Square', sans-serif;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(109,40,217,0.3);
+  transition: all 0.2s;
+}
+.img-plan-trigger:active { transform: scale(0.98); opacity: 0.9; }
+.img-plan-trigger:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* 이미지 기획 패널 */
+#imgPlanSection {
+  display: none;
+  margin-top: 8px;
+}
+.img-plan-header {
+  background: white;
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.img-plan-header h3 {
+  font-size: 14px; font-weight: 800; color: #1e293b; margin-bottom: 12px;
+}
+.img-opts {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.img-opts label {
+  font-size: 12px; font-weight: 700; color: #374151;
+  display: flex; align-items: center; gap: 4px;
+}
+.img-opts select {
+  padding: 6px 10px; border: 1.5px solid #e2e8f0;
+  border-radius: 8px; font-size: 13px;
+  font-family: 'Nanum Square', sans-serif;
+  color: #1e293b; background: #fafafa;
+}
+.btn-plan-gen {
+  width: 100%; padding: 11px;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: white; border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 800;
+  font-family: 'Nanum Square', sans-serif;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-plan-gen:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* 이미지 카드 */
+.img-card {
+  background: white; border-radius: 16px; padding: 16px 18px;
+  margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border-top: 3px solid #7c3aed;
+}
+.img-card-num {
+  font-size: 11px; font-weight: 800; color: #7c3aed;
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+}
+.img-card-title {
+  font-size: 15px; font-weight: 800; color: #1e293b; margin-bottom: 4px;
+}
+.img-card-para {
+  font-size: 12px; color: #64748b; margin-bottom: 8px; line-height: 1.5;
+  background: #f8fafc; border-radius: 6px; padding: 6px 10px;
+}
+.img-card-desc {
+  font-size: 13px; color: #374151; line-height: 1.7; margin-bottom: 10px;
+}
+.img-prompt-wrap {
+  background: #f3f0ff; border-radius: 10px; padding: 12px 14px;
+  margin-bottom: 10px; position: relative;
+}
+.img-prompt-label {
+  font-size: 11px; font-weight: 800; color: #7c3aed;
+  text-transform: uppercase; margin-bottom: 6px; display: block;
+}
+.img-prompt-text {
+  font-size: 13px; color: #1e293b; line-height: 1.7;
+  white-space: pre-wrap; word-break: break-all;
+}
+.img-prompt-edit {
+  width: 100%; padding: 10px 12px; border: 1.5px solid #c4b5fd;
+  border-radius: 8px; font-size: 13px; font-family: 'Nanum Square', sans-serif;
+  color: #1e293b; background: white; resize: none; min-height: 80px;
+  display: none; line-height: 1.6;
+}
+.img-card-btns {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.btn-img {
+  padding: 7px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 12px; font-weight: 800; font-family: 'Nanum Square', sans-serif;
+  cursor: pointer; background: white; color: #374151; transition: all 0.15s;
+}
+.btn-img:active { background: #f1f5f9; }
+.btn-img.purple { background: #ede9fe; color: #6d28d9; border-color: #c4b5fd; }
+.btn-img.green  { background: #dcfce7; color: #166534; border-color: #86efac; }
+.btn-img.red    { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+
+/* 업로드된 이미지 미리보기 */
+.img-preview-wrap {
+  margin-top: 10px; display: none;
+}
+.img-preview-wrap img {
+  width: 100%; border-radius: 10px; object-fit: cover;
+  max-height: 200px;
+}
+.img-preview-label {
+  font-size: 11px; color: #94a3b8; font-weight: 700; margin-bottom: 4px;
+}
+
+/* 이미지 기획 로딩 */
+#imgPlanLoading {
+  display: none; text-align: center; padding: 20px;
+}
+
+/* Gemini 안내 패널 */
+.gemini-guide {
+  background: #f5f3ff; border-radius: 12px; padding: 14px 16px;
+  margin-bottom: 10px; font-size: 13px; line-height: 1.8; color: #374151;
+}
+.gemini-guide strong { color: #6d28d9; }
+.gemini-guide ol { padding-left: 18px; margin-top: 6px; }
+.gemini-guide li { margin-bottom: 3px; }
+
+/* 전술 도식 경고 배지 */
+.tactical-badge {
+  display: inline-block; background: #fef3c7; color: #92400e;
+  border: 1.5px solid #fbbf24; border-radius: 8px;
+  font-size: 11px; font-weight: 800; padding: 4px 10px;
+  margin-bottom: 8px; line-height: 1.5;
+}
+/* 카드 메타 행 */
+.img-card-meta {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;
+}
+.img-meta-chip {
+  background: #f1f5f9; border-radius: 6px; padding: 3px 8px;
+  font-size: 11px; color: #475569; font-weight: 700;
+}
+.img-meta-chip span { font-weight: 400; }
 </style>
 </head>
 <body>
@@ -568,6 +719,90 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
       </div>
     </div>
   </div>
+
+  <!-- ▼▼ 블로그 실사 이미지 만들기 버튼 (결과 완성 후 표시) -->
+  <button class="img-plan-trigger" id="imgPlanTriggerBtn" style="display:none"
+    onclick="openImgPlan()">
+    📸 블로그 실사 이미지 만들기
+  </button>
+
+  <!-- ▼▼ 이미지 기획 패널 -->
+  <div id="imgPlanSection">
+
+    <!-- 사용 안내 -->
+    <div class="gemini-guide">
+      <strong>📌 사용 방법</strong>
+      <ol>
+        <li>이미지 수·비율을 선택하고, 원하면 교실 참고사진을 첨부합니다.</li>
+        <li><strong>[장면 기획 시작]</strong>을 누르면 AI가 블로그 내용에 맞는 장면을 분석합니다.</li>
+        <li>카드마다 <strong>[프롬프트 복사]</strong> → <strong>[Gemini 열기]</strong>로 이미지를 생성하세요.</li>
+        <li>생성한 이미지를 <strong>[이미지 업로드]</strong>로 등록하면 해당 카드에 연결·저장됩니다.</li>
+      </ol>
+      <p style="margin-top:6px;font-size:12px;color:#6d28d9">
+        ⚠️ AI 생성 이미지는 실제 수업·학부모 후기 증거로 소개하지 마세요.
+      </p>
+    </div>
+
+    <!-- 옵션 -->
+    <div class="img-plan-header">
+      <h3>⚙️ 이미지 기획 설정</h3>
+      <div class="img-opts">
+        <label>이미지 수
+          <select id="imgCount">
+            <option value="3">3장</option>
+            <option value="4">4장</option>
+            <option value="5" selected>5장</option>
+            <option value="6">6장</option>
+            <option value="7">7장</option>
+            <option value="8">8장</option>
+          </select>
+        </label>
+        <label>비율
+          <select id="imgRatio">
+            <option value="16:9" selected>16:9 (가로)</option>
+            <option value="4:3">4:3 (일반)</option>
+            <option value="1:1">1:1 (정사각)</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- 교실 참고사진 (선택) -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:4px">
+          🏫 교실 참고사진 첨부 <span style="font-weight:400;color:#94a3b8">(선택 — Gemini 프롬프트에 공간 특징 반영)</span>
+        </div>
+        <input type="file" id="classroomRefFile" accept="image/*" style="display:none"
+          onchange="handleClassroomRef(this)">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <button class="btn-img" onclick="document.getElementById('classroomRefFile').click()">
+            📷 교실 사진 첨부
+          </button>
+          <span id="classroomRefName" style="font-size:12px;color:#64748b"></span>
+          <button class="btn-img red" id="classroomRefClear" style="display:none"
+            onclick="clearClassroomRef()">✕ 제거</button>
+        </div>
+        <div id="classroomRefPreview" style="display:none;margin-top:6px">
+          <img id="classroomRefImg" src="" alt="교실 참고사진"
+            style="max-height:120px;border-radius:8px;object-fit:cover">
+        </div>
+      </div>
+
+      <button class="btn-plan-gen" id="btnPlanGen" onclick="planImages()">
+        🎬 장면 기획 시작
+      </button>
+    </div>
+
+    <!-- 로딩 -->
+    <div id="imgPlanLoading">
+      <div class="spinner"></div>
+      <p style="color:#7c3aed;font-weight:700;margin-top:8px">블로그 내용을 분석하고 장면을 기획하는 중...</p>
+    </div>
+
+    <!-- 카드 목록 -->
+    <div id="imgCardList"></div>
+
+  </div>
+  <!-- ▲▲ 이미지 기획 패널 끝 -->
 
 </div>
 </div>
@@ -856,6 +1091,14 @@ async function generate() {
     document.getElementById('resultSection').style.display = 'block';
     document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
 
+    // 이미지 기획 버튼 표시 + 기존 패널 닫기
+    document.getElementById('imgPlanTriggerBtn').style.display = 'block';
+    document.getElementById('imgPlanSection').style.display = 'none';
+    // 현재 블로그 본문 전역 저장
+    window._lastBlogBody = sections.body;
+    window._lastBranch = document.getElementById('branch').value;
+    window._lastTarget = document.getElementById('target').value;
+
     // 저장
     saveHistory({
       date: new Date().toLocaleString('ko-KR'),
@@ -975,6 +1218,14 @@ function loadHistory(i) {
     else { recEl.style.display = 'none'; }
 
     document.getElementById('resultSection').style.display = 'block';
+
+    // 이미지 기획 버튼 활성화
+    document.getElementById('imgPlanTriggerBtn').style.display = 'block';
+    document.getElementById('imgPlanSection').style.display = 'none';
+    window._lastBlogBody = item.body || '';
+    window._lastBranch = item.branch || '전체';
+    window._lastTarget = item.target || '초등 전체';
+
     showPage('write', document.querySelectorAll('.nav-btn')[0]);
     showToast('✅ 저장된 글을 불러왔어요!');
     setTimeout(() => document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' }), 300);
@@ -1053,6 +1304,336 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ──────────────────────────────────────────────────
+// 이미지 기획 기능
+// ──────────────────────────────────────────────────
+
+// 이미지 기획 패널 열기/닫기 토글
+function openImgPlan() {
+  const sec = document.getElementById('imgPlanSection');
+  const btn = document.getElementById('imgPlanTriggerBtn');
+  if (sec.style.display === 'block') {
+    sec.style.display = 'none';
+    btn.textContent = '📸 블로그 실사 이미지 만들기';
+  } else {
+    sec.style.display = 'block';
+    btn.textContent = '✕ 이미지 기획 닫기';
+    sec.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+// 이미지 장면 기획 API 호출
+// 교실 참고사진 처리
+window._classroomRefDesc = '';
+function handleClassroomRef(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('classroomRefImg').src = e.target.result;
+    document.getElementById('classroomRefPreview').style.display = 'block';
+    document.getElementById('classroomRefName').textContent = file.name;
+    document.getElementById('classroomRefClear').style.display = 'inline-block';
+    // 파일명과 크기를 텍스트 설명으로 전달 (이미지는 API에 전송하지 않음)
+    window._classroomRefDesc = `교실 참고사진 파일명: ${file.name}. 사용자가 실제 교실 사진을 참고자료로 제공했습니다.`;
+  };
+  reader.readAsDataURL(file);
+}
+function clearClassroomRef() {
+  document.getElementById('classroomRefFile').value = '';
+  document.getElementById('classroomRefImg').src = '';
+  document.getElementById('classroomRefPreview').style.display = 'none';
+  document.getElementById('classroomRefName').textContent = '';
+  document.getElementById('classroomRefClear').style.display = 'none';
+  window._classroomRefDesc = '';
+}
+
+async function planImages() {
+  const blogBody = window._lastBlogBody || '';
+  if (!blogBody.trim()) {
+    showToast('블로그 본문이 없습니다. 먼저 글을 생성해주세요.');
+    return;
+  }
+
+  const count = parseInt(document.getElementById('imgCount').value, 10);
+  const ratio = document.getElementById('imgRatio').value;
+  const branch = window._lastBranch || '전체';
+  const target = window._lastTarget || '초등 전체';
+  const blogTitle = (document.getElementById('blogTitle') || {}).textContent || '';
+  const classroomRef = window._classroomRefDesc || '';
+
+  document.getElementById('imgPlanLoading').style.display = 'block';
+  document.getElementById('imgCardList').innerHTML = '';
+  document.getElementById('btnPlanGen').disabled = true;
+
+  try {
+    const fd = new FormData();
+    fd.append('blog_text', blogBody);
+    fd.append('branch', branch);
+    fd.append('target', target);
+    fd.append('count', count);
+    fd.append('ratio', ratio);
+    fd.append('blog_title', blogTitle.substring(0, 200));
+    fd.append('classroom_ref', classroomRef);
+
+    const res = await fetch('/api/plan-images', {
+      method: 'POST', body: fd
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || '서버 오류 ' + res.status);
+    }
+    const data = await res.json();
+    const scenes = data.scenes || [];
+    if (!scenes.length) throw new Error('장면 데이터가 없습니다.');
+
+    renderImgCards(scenes, ratio);
+    showToast(`✅ ${scenes.length}개 장면 기획 완료!`);
+  } catch (e) {
+    showToast('장면 기획 오류: ' + e.message);
+  } finally {
+    document.getElementById('imgPlanLoading').style.display = 'none';
+    document.getElementById('btnPlanGen').disabled = false;
+  }
+}
+
+// 이미지 카드 렌더링
+function renderImgCards(scenes, ratio) {
+  const list = document.getElementById('imgCardList');
+  list.innerHTML = '';
+  scenes.forEach((sc, i) => {
+    const id = sc.id || ('scene_' + i);
+    const card = document.createElement('div');
+    card.className = 'img-card';
+    card.id = 'img-card-' + id;
+    card.innerHTML = imgCardHTML(sc, i, ratio);
+    list.appendChild(card);
+  });
+  try { localStorage.setItem('imgScenes_draft', JSON.stringify(scenes)); } catch(e) {}
+}
+
+function imgCardHTML(sc, i, ratio) {
+  const safeId = sc.id || ('scene_' + i);
+  const isTactical = sc.is_tactical_diagram === true;
+  const tacticalNote = sc.tactical_note || '';
+
+  const tacticalBadge = isTactical ? `
+  <div class="tactical-badge">
+    ♟️ 전술 도식 주의 — AI 실사 이미지는 기물 정확도를 보장하지 않습니다.
+    ${tacticalNote ? '<br>권장: ' + esc(tacticalNote) : ''}
+  </div>` : '';
+
+  const metaChips = [
+    sc.educational_meaning ? `<div class="img-meta-chip">💡 <span>${esc(sc.educational_meaning)}</span></div>` : '',
+    sc.camera_angle ? `<div class="img-meta-chip">📷 <span>${esc(sc.camera_angle)}</span></div>` : '',
+    sc.characters ? `<div class="img-meta-chip">👤 <span>${esc(sc.characters)}</span></div>` : '',
+  ].filter(Boolean).join('');
+
+  return `
+  <div class="img-card-num">장면 ${i + 1}</div>
+  <div class="img-card-title">${esc(sc.title)}</div>
+
+  ${tacticalBadge}
+
+  <div class="img-card-para">
+    <strong style="font-size:11px;color:#7c3aed">연결 문단</strong><br>${esc(sc.paragraph)}
+  </div>
+
+  ${metaChips ? `<div class="img-card-meta">${metaChips}</div>` : ''}
+
+  <div class="img-card-desc">${esc(sc.description)}</div>
+
+  <div class="img-prompt-wrap">
+    <span class="img-prompt-label">📝 Gemini 프롬프트 (${ratio})</span>
+    <div class="img-prompt-text" id="prompt-view-${safeId}">${esc(sc.prompt)}</div>
+    <textarea class="img-prompt-edit" id="prompt-edit-${safeId}"
+      rows="5">${esc(sc.prompt)}</textarea>
+  </div>
+
+  <div class="img-card-btns">
+    <button class="btn-img purple" onclick="copyPrompt('${safeId}')">📋 프롬프트 복사</button>
+    <button class="btn-img purple" onclick="openGemini()">🔗 Gemini 열기</button>
+    <button class="btn-img" onclick="toggleEditPrompt('${safeId}')">✏️ 프롬프트 수정</button>
+    <button class="btn-img" onclick="replanScene('${safeId}', ${i})">🔄 장면 다시 기획</button>
+    <button class="btn-img green" onclick="triggerUpload('${safeId}')">⬆️ 이미지 업로드</button>
+  </div>
+
+  <input type="file" id="file-input-${safeId}" accept="image/*" style="display:none"
+    onchange="handleImgUpload(this, '${safeId}')">
+
+  <div class="img-preview-wrap" id="preview-wrap-${safeId}">
+    <div class="img-preview-label">✅ 업로드된 이미지</div>
+    <img id="preview-img-${safeId}" src="" alt="미리보기">
+    <div style="display:flex;gap:6px;margin-top:6px">
+      <button class="btn-img green" onclick="downloadImg('${safeId}')">💾 다운로드</button>
+      <button class="btn-img red" onclick="deleteImg('${safeId}')">🗑️ 이미지 삭제</button>
+    </div>
+  </div>`;
+}
+
+// HTML 이스케이프
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// 프롬프트 복사
+function copyPrompt(id) {
+  const view = document.getElementById('prompt-view-' + id);
+  const edit = document.getElementById('prompt-edit-' + id);
+  const text = edit.style.display === 'block' ? edit.value : (view ? view.textContent : '');
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('✅ 프롬프트가 복사됐어요! Gemini에 붙여넣기 하세요.');
+  }).catch(() => {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('✅ 복사됐어요!');
+  });
+}
+
+// Gemini 열기
+function openGemini() {
+  window.open('https://gemini.google.com/app', '_blank');
+}
+
+// 프롬프트 수정 토글
+function toggleEditPrompt(id) {
+  const view = document.getElementById('prompt-view-' + id);
+  const edit = document.getElementById('prompt-edit-' + id);
+  if (edit.style.display === 'block') {
+    // 저장
+    view.textContent = edit.value;
+    edit.style.display = 'none';
+    view.style.display = 'block';
+    showToast('프롬프트가 수정됐어요.');
+  } else {
+    edit.value = view.textContent;
+    edit.style.display = 'block';
+    view.style.display = 'none';
+  }
+}
+
+// 개별 장면 다시 기획
+async function replanScene(id, idx) {
+  const blogBody = window._lastBlogBody || '';
+  if (!blogBody.trim()) { showToast('블로그 본문이 없습니다.'); return; }
+
+  const count = 1;
+  const ratio = document.getElementById('imgRatio').value;
+  const branch = window._lastBranch || '전체';
+  const target = window._lastTarget || '초등 전체';
+
+  const card = document.getElementById('img-card-' + id);
+  if (!card) return;
+  const origHTML = card.innerHTML;
+  card.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div><p style="color:#7c3aed;font-weight:700;margin-top:8px">재기획 중...</p></div>';
+
+  try {
+    const fd = new FormData();
+    fd.append('blog_text', blogBody);
+    fd.append('branch', branch);
+    fd.append('target', target);
+    fd.append('count', count);
+    fd.append('ratio', ratio);
+    fd.append('scene_hint', `장면 ${idx + 1}을 새로운 각도로 다시 기획해주세요.`);
+
+    const res = await fetch('/api/plan-images', { method: 'POST', body: fd });
+    if (!res.ok) throw new Error('서버 오류');
+    const data = await res.json();
+    const scenes = data.scenes || [];
+    if (!scenes.length) throw new Error('결과 없음');
+    const sc = scenes[0];
+    sc.id = id;
+    card.innerHTML = imgCardHTML(sc, idx, ratio);
+    showToast('✅ 장면이 다시 기획됐어요!');
+  } catch(e) {
+    card.innerHTML = origHTML;
+    showToast('재기획 오류: ' + e.message);
+  }
+}
+
+// 파일 업로드 트리거
+function triggerUpload(id) {
+  document.getElementById('file-input-' + id).click();
+}
+
+// 이미지 업로드 처리
+function handleImgUpload(input, id) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    const img = document.getElementById('preview-img-' + id);
+    const wrap = document.getElementById('preview-wrap-' + id);
+    if (img && wrap) {
+      img.src = dataUrl;
+      wrap.style.display = 'block';
+      try { localStorage.setItem('imgUpload_' + id, dataUrl); } catch(e) {}
+      showToast('✅ 이미지가 등록됐어요!');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+// 이미지 다운로드
+function downloadImg(id) {
+  const img = document.getElementById('preview-img-' + id);
+  if (!img || !img.src || img.src === window.location.href) {
+    showToast('다운로드할 이미지가 없습니다.');
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = img.src;
+  a.download = 'chess_image_' + id + '.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// 이미지 삭제
+function deleteImg(id) {
+  const img = document.getElementById('preview-img-' + id);
+  const wrap = document.getElementById('preview-wrap-' + id);
+  const input = document.getElementById('file-input-' + id);
+  if (img) img.src = '';
+  if (wrap) wrap.style.display = 'none';
+  if (input) input.value = '';
+  try { localStorage.removeItem('imgUpload_' + id); } catch(e) {}
+  showToast('이미지가 삭제됐어요.');
+}
+
+// 저장된 글 불러올 때 이미지 기획 버튼도 활성화
+function loadHistoryItem(item) {
+  document.getElementById('branch').value = item.branch || '사우점';
+  document.getElementById('lesson').value = item.lesson || '';
+  document.getElementById('blogBody').innerHTML = renderBlogBody(item.body || '');
+  document.getElementById('blogTitle').textContent = item.title || '';
+  document.getElementById('instaBody').textContent = item.insta || '';
+  document.getElementById('hashTag').textContent = item.hash || '';
+  document.getElementById('imgText').textContent = item.imgText || '';
+
+  const recommend = parseTitleRecommend(item.title || '');
+  const recEl = document.getElementById('titleRecommend');
+  if (recommend) { recEl.textContent = '⭐ 추천: ' + recommend; recEl.style.display = 'block'; }
+  else { recEl.style.display = 'none'; }
+
+  renderSeoScore(item.seo || null);
+  document.getElementById('resultSection').style.display = 'block';
+
+  // 이미지 기획 버튼 표시
+  document.getElementById('imgPlanTriggerBtn').style.display = 'block';
+  document.getElementById('imgPlanSection').style.display = 'none';
+  window._lastBlogBody = item.body || '';
+  window._lastBranch = item.branch || '전체';
+  window._lastTarget = item.target || '초등 전체';
+
+  switchPage('page-write');
+  document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
 }
 </script>
 </body>
