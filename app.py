@@ -827,3 +827,209 @@ async def privacy_edit(file: UploadFile = File(...)):
         raise RuntimeError("이미지 없음")
     except Exception as e:
         raise HTTPException(500, f"이미지 생성 오류: {str(e)}")
+
+
+# ──────────────────────────────────────────────────────
+# /api/plan-images  — 블로그 실사 이미지 장면 기획
+# Gemini API 미사용 — 수동 복사-붙여넣기 방식
+# ──────────────────────────────────────────────────────
+
+# 체스판·기물 정확성 지시문 (모든 프롬프트에 자동 포함)
+CHESS_ACCURACY_INSTRUCTION = (
+    "체스판은 표준 8×8 격자(총 64칸), 밝은 칸과 어두운 칸이 정확히 번갈아 배치된 형태. "
+    "기물은 표준 스타운턴 스타일, 흰색과 검정색 두 진영만 사용. "
+    "빨강·노랑·파랑 등 장난감 기물 절대 금지. "
+    "킹·퀸·룩·비숍·나이트·폰의 형태를 명확히 구분. "
+    "기물이 칸 위에 정확히 놓이도록. "
+    "이미지 내부에 글자·로고·전화번호·한글 텍스트를 임의로 생성하지 말 것."
+)
+
+# 카메라 구도 풀(매 기획마다 다르게 배분)
+CAMERA_ANGLES = [
+    "학생 눈높이에서 촬영한 수업 장면",
+    "선생님 어깨 너머로 체스판을 보는 구도",
+    "학생 표정과 체스판을 함께 담은 클로즈업",
+    "두 학생이 마주 앉아 토론하는 측면 구도",
+    "여러 학생이 각자 문제를 해결하는 전체 교실 구도",
+    "체스 기물을 움직이는 손과 집중한 얼굴이 함께 보이는 구도",
+    "대국이 끝난 뒤 악수하는 자연스러운 장면",
+    "위에서 내려다보는 체스판 중심 구도",
+]
+
+
+@app.post("/api/plan-images")
+async def plan_images(
+    blog_text: str = Form(...),
+    branch: str = Form("전체"),
+    target: str = Form("초등 전체"),
+    count: int = Form(5),
+    ratio: str = Form("16:9"),
+    scene_hint: str = Form(""),
+    blog_title: str = Form(""),
+    classroom_ref: str = Form(""),   # 교실 참고사진 설명 (선택)
+):
+    """
+    블로그 본문·제목·지점·대상을 분석해 실사 이미지 장면 기획 및
+    Gemini 이미지 생성용 고품질 한국어 프롬프트를 반환.
+    Gemini API를 직접 호출하지 않으며, 수동 복사-붙여넣기 방식 지원.
+    """
+    count = max(3, min(8, count))
+
+    branch_area = BRANCH_AREA.get(branch, "김포 지역")
+
+    ratio_hint = {
+        "16:9": "가로형 16:9 (블로그 본문 삽입·배너 최적)",
+        "4:3":  "일반형 4:3 (카드뉴스·인쇄물 최적)",
+        "1:1":  "정사각형 1:1 (인스타그램·SNS 피드 최적)",
+    }.get(ratio, "가로형 16:9")
+
+    scene_hint_str = f"\n\n[개별 장면 추가 요청] {scene_hint}" if scene_hint else ""
+    title_str = f"\n블로그 제목: {blog_title}" if blog_title else ""
+    classroom_str = (
+        f"\n[교실 참고사진 정보] 사용자가 다음 교실 특징을 제공했습니다: {classroom_ref}\n"
+        "프롬프트에 이 공간적 특징을 반영하되, 실제 사진이라고 단정하지 말 것."
+    ) if classroom_ref else ""
+
+    system_prompt = (
+        "당신은 체스 교육 전문 기관의 블로그 이미지 기획 전문가입니다.\n"
+        "생각키움연구소의 수업 철학 '관찰 → 생각 → 비교 → 선택 → 결과 확인'을 시각적으로 표현합니다.\n\n"
+
+        "═══ A. 사진 품질 기준 ═══\n"
+        "- 고해상도 포토리얼리스틱 실사 사진\n"
+        "- 자연스러운 피부 질감과 얼굴 표정\n"
+        "- 자연광과 부드러운 실내 조명\n"
+        "- 실제 교육 현장을 촬영한 듯한 현실적 구도\n"
+        "- 선명한 피사체와 적절한 배경 심도\n"
+        "- 밝고 쾌적하며 전문적인 교육 공간\n"
+        "- 따뜻하고 신뢰감 있는 분위기\n"
+        "- 과도한 보정·인위적 피부·만화풍·3D 렌더링 배제\n"
+        "- 광고용 스톡사진 분위기 배제\n\n"
+
+        "═══ B. 인물 표현 기준 ═══\n"
+        "- 한국 학생(대상 연령에 맞는 외모)\n"
+        "- 선생님과 학생의 자연스러운 시선 교환\n"
+        "- 실제 대화 중인 듯한 입 모양과 표정\n"
+        "- 현실적인 손가락 개수와 손의 위치\n"
+        "- 과도하게 크거나 작은 머리·손 방지\n"
+        "- 동일 얼굴 반복 금지\n"
+        "- 항상 카메라를 보며 웃는 모습 대신 수업 집중 장면 우선\n"
+        "- 학생들이 모두 똑같은 자세를 취하지 않도록\n\n"
+
+        "═══ C. 체스판·기물 정확성 (필수) ═══\n"
+        f"{CHESS_ACCURACY_INSTRUCTION}\n\n"
+
+        "═══ D. 전술 장면 특별 처리 ═══\n"
+        "포크·핀·스큐어·체크메이트·오포지션 등 정확한 기물 배치가 필요한 전술 장면은:\n"
+        "실사 이미지에서는 '학생이 전술을 고민하는 분위기'를 표현하고,\n"
+        "'정확한 포지션 도식'이라고 주장하지 말 것.\n"
+        "is_tactical_diagram 필드를 true로 설정해 사용자에게 별도 렌더링을 권장할 것.\n\n"
+
+        "═══ E. 이미지 다양성 ═══\n"
+        "한 게시글의 장면들이 모두 비슷하지 않도록:\n"
+        "- 각 장면마다 다른 카메라 구도 사용\n"
+        "- 인물 수, 거리감, 시점을 다양화\n"
+        "- 글 전체의 사진 톤은 통일하되 장면은 다양하게\n"
+        "- 본문에 없는 활동을 임의로 추가하지 말 것\n\n"
+
+        "═══ F. AI 생성 이미지 윤리 원칙 ═══\n"
+        "- 실제 학생·교사의 사진이라고 소개하지 말 것\n"
+        "- 실제 학부모 후기의 증거로 소개하지 말 것\n"
+        "- 특정 지점의 실제 교실을 정확히 재현했다고 주장하지 말 것\n"
+        "- AI 생성 이미지임을 사용자가 인지하도록 설명 포함\n\n"
+
+        f"[지점] {branch} ({branch_area})\n"
+        f"[대상 연령] {target}\n"
+        f"[이미지 비율] {ratio_hint}\n"
+        f"{classroom_str}"
+    )
+
+    user_prompt = (
+        f"아래 블로그 글을 분석해 이미지 장면 {count}개를 기획해 주세요.{title_str}{scene_hint_str}\n\n"
+
+        "【기획 원칙】\n"
+        "1. 각 장면은 블로그의 특정 문단과 정확히 연결되어야 합니다.\n"
+        "2. 도입 → 수업 과정 → 사고 활동 → 상호작용 → 성취감 순으로 글 흐름에 맞게 배치하세요.\n"
+        "3. 동일 구도·인물·표정 반복 금지. 장면마다 카메라 각도와 인물 배치를 다르게 하세요.\n"
+        "4. 본문에 언급된 내용만 장면으로 만들고, 없는 활동은 추가하지 마세요.\n"
+        "5. 체스 전술 정확도가 중요한 장면은 is_tactical_diagram을 true로 표시하세요.\n\n"
+
+        "【Gemini 프롬프트 작성 기준】\n"
+        "- 짧은 키워드 나열이 아닌 완성형 서술문으로 작성\n"
+        "- 학생 연령, 인물 수, 행동, 감정, 조명, 구도를 모두 포함\n"
+        "- 체스판·기물 정확성 조건 반드시 포함\n"
+        "- 이미지 내 텍스트·로고·전화번호 생성 금지 명시\n"
+        "- 200~300자의 구체적이고 지시적인 한국어 문장\n\n"
+
+        "【프롬프트 자동 검수 항목】\n"
+        "- 블로그 내용과 일치 여부\n"
+        "- 학생 연령 정확성\n"
+        "- 체스판·기물 정확성 조건 포함 여부\n"
+        "- 손·얼굴 왜곡 최소화 지시 포함 여부\n"
+        "- Gemini가 이해하기 쉬운 명확한 문장인지\n"
+        "검수 후 최종 프롬프트를 생성하세요.\n\n"
+
+        "반드시 아래 JSON 배열 형식으로만 응답하세요 (설명 없이 JSON만):\n"
+        "[\n"
+        "  {\n"
+        '    "id": "scene_1",\n'
+        '    "title": "장면 제목 (12자 이내)",\n'
+        '    "paragraph": "연결된 블로그 본문 발췌 (40자 이내)",\n'
+        '    "educational_meaning": "이 장면의 교육적 의미 (1문장)",\n'
+        '    "characters": "등장인물과 행동 설명 (1~2문장)",\n'
+        '    "camera_angle": "카메라 구도 설명 (1문장)",\n'
+        '    "description": "전체 장면 설명 (2~3문장)",\n'
+        '    "is_tactical_diagram": false,\n'
+        '    "tactical_note": "전술 도식이 필요한 경우 FEN/PGN 권장 사유 (해당 없으면 빈 문자열)",\n'
+        '    "prompt": "Gemini 이미지 생성용 완성형 한국어 프롬프트 (200~300자)"\n'
+        "  }\n"
+        "]\n\n"
+        f"--- 블로그 본문 ---\n{blog_text[:4000]}"
+    )
+
+    c = get_client()
+    try:
+        r = c.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": user_prompt},
+            ],
+            max_tokens=3500,
+            temperature=0.75,
+        )
+        raw = r.choices[0].message.content.strip()
+
+        # JSON 추출: 코드 블록 제거
+        json_text = raw
+        if "```" in raw:
+            m = re.search(r"```(?:json)?\s*([\s\S]+?)```", raw, re.DOTALL)
+            if m:
+                json_text = m.group(1).strip()
+
+        scenes = json.loads(json_text)
+        if not isinstance(scenes, list):
+            raise ValueError("JSON 배열이 아닙니다.")
+
+        # 보정: id, is_tactical_diagram 기본값
+        for idx, sc in enumerate(scenes):
+            if not sc.get("id"):
+                sc["id"] = f"scene_{idx + 1}"
+            if "is_tactical_diagram" not in sc:
+                sc["is_tactical_diagram"] = False
+            if not sc.get("tactical_note"):
+                sc["tactical_note"] = ""
+            # 체스 정확성 조건이 프롬프트에 없으면 자동 보완
+            prompt = sc.get("prompt", "")
+            if "8×8" not in prompt and "스타운턴" not in prompt:
+                sc["prompt"] = (
+                    prompt.rstrip(".")
+                    + " 체스판은 표준 8×8 격자, 기물은 스타운턴 스타일의 흑백 두 진영만 사용. "
+                    "이미지 내 텍스트·로고·전화번호 생성 금지."
+                )
+
+        return JSONResponse({"scenes": scenes})
+
+    except json.JSONDecodeError as e:
+        raise HTTPException(500, f"JSON 파싱 오류: {str(e)}")
+    except Exception as e:
+        raise HTTPException(500, f"장면 기획 오류: {str(e)}")
