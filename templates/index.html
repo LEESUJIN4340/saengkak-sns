@@ -304,7 +304,7 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
 .history-branch { font-size: 12px; color: #3B5BDB; font-weight: 700; }
 .history-empty { text-align: center; padding: 30px; color: #94a3b8; font-size: 14px; font-weight: 700; }
 
-/* 네이버 검색 최적화 탭 */
+/* 검색 콘텐츠 관리 탭 */
 .seo-manage-card {
   background: white;
   border-radius: 16px;
@@ -572,6 +572,7 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
   border-left: 3px solid #f59e0b;
   font-size: 12px; line-height: 1.5;
 }
+.profile-input {width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin:3px 0 10px;}
 </style>
 </head>
 <body>
@@ -629,6 +630,28 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
     </div>
 
     <div class="field-group">
+      <label class="field-label" for="intent">이번 글의 목적</label>
+      <select id="intent"><option>지역 학원 찾기</option><option selected>수업 후기</option><option>첫 수업·입문 궁금증</option><option>원생 모집·상담</option><option>대회 안내·준비</option></select>
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="keyword">목표 검색어</label>
+      <input type="text" id="keyword" maxlength="100" placeholder="예: 구래동 체스학원" style="width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px">
+      <small style="color:#64748b">한 글의 중심 검색어입니다. 인근 지역도 선택할 수 있습니다.</small>
+      <div id="keywordSuggestions" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>
+    </div>
+    <details style="margin:12px 0;padding:12px;background:#f8fafc;border-radius:12px">
+      <summary style="cursor:pointer;font-weight:700">지점별 안내 정보 설정</summary>
+      <p style="font-size:12px;color:#64748b;margin:10px 0">현재 선택한 지점의 정보만 입력하세요. 이 브라우저에 저장되며, 글 생성 시 AI에 전달됩니다. 비워 둔 정보는 임의로 만들지 않습니다. 전체 선택 시 공통 정보만 입력하세요.</p>
+      <label class="field-label" for="profileAddress">실제 주소</label><input class="profile-input" id="profileAddress" type="text" maxlength="1000">
+      <label class="field-label" for="profilePhone">상담 전화</label><input class="profile-input" id="profilePhone" type="text" maxlength="100">
+      <label class="field-label" for="profileHours">수업 요일·시간</label><input class="profile-input" id="profileHours" type="text" maxlength="1000">
+      <label class="field-label" for="profileClass">대상·정원·수업 특징 등 확인된 정보</label><textarea id="profileClass" maxlength="2000"></textarea>
+      <label class="field-label" for="profileMap">지도 링크</label><input class="profile-input" id="profileMap" type="text" maxlength="1000">
+      <button type="button" class="btn-small" onclick="saveBranchProfile()" style="margin-top:8px">지점 정보 저장</button>
+      <button type="button" class="btn-small" onclick="exportSettings()" style="margin-top:8px">정보·기록 백업</button>
+      <label style="display:inline-block;margin-top:8px;cursor:pointer;color:#3b5bdb">백업 불러오기<input type="file" accept="application/json,.json" onchange="importSettings(this)" style="display:none"></label>
+    </details>
+    <div class="field-group">
       <label class="field-label">오늘 수업 내용</label>
       <textarea id="lesson" placeholder="예) 핀과 포크 전술 배움. 실전 대국 3판. 처음 온 학생도 집중 잘 함. 부모님 문의도 있었음."></textarea>
     </div>
@@ -649,7 +672,7 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
       <button class="tab-btn active" onclick="switchTab('blog', this)">📝 블로그</button>
       <button class="tab-btn" onclick="switchTab('insta', this)">📱 인스타</button>
       <button class="tab-btn" onclick="switchTab('hash', this)">🏷️ 해시태그</button>
-      <button class="tab-btn" onclick="switchTab('seo', this)">📊 SEO점수</button>
+      <button class="tab-btn" onclick="switchTab('seo', this)">📋 발행 전 점검</button>
     </div>
 
     <!-- 블로그 탭 -->
@@ -704,7 +727,7 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
     <div class="tab-content" id="tab-seo">
       <div class="result-card">
         <div class="result-header">
-          <span class="result-label">📊 SEO 품질 점수</span>
+          <span class="result-label">📋 발행 전 점검</span>
         </div>
         <div class="seo-score-wrap">
           <div class="seo-total">
@@ -721,7 +744,7 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
           </div>
         </div>
         <p style="font-size:11px;color:#94a3b8;margin-top:12px;line-height:1.6">
-          ※ 이 점수는 내부 품질 기준이며, 네이버 공식 SEO 점수나 검색 상위 노출 확률이 아닙니다.
+          ※ 점검표는 작성 보조 기능입니다. 검색 순위나 상위 노출을 보장하지 않습니다.
         </p>
       </div>
     </div>
@@ -879,7 +902,7 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
 </div>
 </div>
 
-<!-- 페이지 3: 네이버 검색 최적화 -->
+<!-- 페이지 3: 검색 콘텐츠 관리 -->
 <div class="page" id="page-seo">
 <div class="container" style="margin-top:4px">
 
@@ -919,7 +942,7 @@ textarea { resize: none; min-height: 90px; line-height: 1.6; }
     </table>
     </div>
     <p style="font-size:12px;color:#94a3b8;margin-top:10px;line-height:1.6">
-      ※ 실제 학원이 위치하지 않은 지역 키워드는 사용하지 않습니다.
+      ※ 풍무동·걸포동·북변동은 사우점, 운양동은 장기점, 마산동은 구래점의 인근 이용 지역입니다. 실제 소재지와 구분해 안내합니다.
     </p>
   </div>
 
@@ -991,11 +1014,11 @@ function switchTab(name, btn) {
 
 // 소제목 굵고 크게 렌더링
 function renderBlogBody(text) {
-  const lines = text.split('\n');
+  const lines = esc(text || '').split('\n');
   return lines.map(line => {
     const trimmed = line.trim();
     if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
-      const title = trimmed.slice(2, -2);
+      const title = trimmed.slice(2, -2).replace(/^🔹\s*/, '');
       return `<span class="blog-h2">🔹 ${title}</span>`;
     }
     if (trimmed.startsWith('## ')) {
@@ -1051,37 +1074,21 @@ function parseSeoScore(text) {
   return { total, items, improve };
 }
 
-function renderSeoScore(seoData) {
-  if (!seoData || seoData.total === null) {
-    document.getElementById('seoScoreNum').textContent = '-';
-    document.getElementById('seoItems').innerHTML = '<p style="color:#94a3b8;font-size:13px">점수 정보를 불러오지 못했습니다.</p>';
-    return;
+function renderSeoScore(data) {
+  const wrap = document.querySelector('.seo-score-wrap');
+  if (!wrap) return;
+  if (!data || !Array.isArray(data.items)) {
+    wrap.innerHTML = '<p>새 글을 생성하면 발행 전 점검 결과가 표시됩니다.</p>'; return;
   }
-  const score = seoData.total;
-  const color = score >= 80 ? '#16a34a' : score >= 60 ? '#d97706' : '#dc2626';
-
-  document.getElementById('seoScoreNum').textContent = score;
-  document.getElementById('seoScoreNum').style.color = color;
-  const bar = document.getElementById('seoBarFill');
-  bar.style.background = color;
-  setTimeout(() => { bar.style.width = score + '%'; }, 100);
-
-  const itemsHtml = seoData.items.map(item => {
-    const c = item.score >= 8 ? '#16a34a' : item.score >= 6 ? '#d97706' : '#dc2626';
-    return `<div class="seo-item">
-      <span class="seo-item-name">${item.name}</span>
-      <span class="seo-item-score" style="color:${c}">${item.score}점</span>
-      <span class="seo-item-comment">${item.comment}</span>
-    </div>`;
-  }).join('');
-  document.getElementById('seoItems').innerHTML = itemsHtml;
-
-  if (seoData.improve && seoData.improve.length > 3) {
-    document.getElementById('seoImprove').style.display = 'block';
-    document.getElementById('seoImproveText').textContent = seoData.improve;
-  } else {
-    document.getElementById('seoImprove').style.display = 'none';
+  if (!Object.prototype.hasOwnProperty.call(data, 'editor_review')) {
+    wrap.innerHTML = '<p>이전 버전의 자체 점수 기록입니다. 실제 검색 순위를 측정한 결과가 아닙니다. 새 글을 생성하면 점검표로 표시됩니다.</p>'; return;
   }
+  const row = item => `<div class="seo-item"><span class="seo-item-name">${esc(item.name)}</span><span style="font-weight:700">${esc(item.status)}</span><span class="seo-item-comment">${esc(item.comment)}</span></div>`;
+  wrap.innerHTML = '<p style="font-size:12px;color:#64748b;margin-bottom:12px">' + esc(data.note || '') + '</p>' +
+    data.items.map(row).join('') + '<h4 style="margin-top:16px">AI 편집 의견</h4>' +
+    (data.editor_review || []).map(x => '<p style="margin:8px 0">• ' + esc(x) + '</p>').join('') +
+    '<h4 style="margin-top:16px">발행 전 확인할 정보</h4>' +
+    ((data.missing_info || []).length ? data.missing_info.map(x => '<p style="margin:8px 0">• ' + esc(x) + '</p>').join('') : '<p>AI가 추가 항목을 제시하지 않았습니다. 실제 수업 내용과 운영 정보는 직접 확인해 주세요.</p>');
 }
 
 // 추천 제목 파싱
@@ -1113,6 +1120,12 @@ async function generate() {
   fd.append('content_type', document.getElementById('content_type').value);
   fd.append('target', document.getElementById('target').value);
   fd.append('lesson', lesson);
+  const currentProfile = readProfileForm();
+  saveBranchProfile(true);
+  fd.append('intent', document.getElementById('intent').value);
+  fd.append('keyword', document.getElementById('keyword').value.trim());
+  fd.append('branch_profile', JSON.stringify(currentProfile));
+  fd.append('recent_posts', JSON.stringify(readRecentPosts()));
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 120000);
@@ -1120,8 +1133,10 @@ async function generate() {
   try {
     const res = await fetch('/api/generate', { method: 'POST', body: fd, signal: controller.signal });
     clearTimeout(timeoutId);
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : '입력 정보 또는 서버 설정을 확인해 주세요.');
     const text = data.text || '';
+    if (!text.includes('===블로그본문===')) throw new Error('본문이 누락되었습니다. 다시 생성해 주세요.');
 
     // 섹션 파싱
     const sections = parseResult(text);
@@ -1147,7 +1162,7 @@ async function generate() {
     document.getElementById('hashTag').textContent = sections.hash;
 
     // SEO 점수
-    const seoData = parseSeoScore(text);
+    const seoData = data.checks || parseSeoScore(text);
     renderSeoScore(seoData);
 
     document.getElementById('resultSection').style.display = 'block';
@@ -1172,6 +1187,8 @@ async function generate() {
       hash: sections.hash,
       imgText: sections.imgText,
       seo: seoData,
+      keyword: data.keyword,
+      intent: document.getElementById('intent').value,
       raw: text
     });
 
@@ -1180,7 +1197,7 @@ async function generate() {
     if (e.name === 'AbortError') {
       showToast('서버 응답 시간이 초과됐습니다. 다시 시도해주세요.');
     } else {
-      showToast('오류가 발생했어요. 다시 시도해주세요.');
+      showToast(e.message || '오류가 발생했어요. 다시 시도해주세요.');
     }
   } finally {
     stopLoadingMsg();
@@ -1194,7 +1211,7 @@ function parseResult(text) {
   const get = (start, end) => {
     const s = text.indexOf(start);
     if (s === -1) return '';
-    const content = end ? text.substring(s + start.length, text.indexOf(end, s + start.length)) : text.substring(s + start.length);
+    const content = end ? text.substring(s + start.length, text.indexOf(end, s + start.length) === -1 ? text.length : text.indexOf(end, s + start.length)) : text.substring(s + start.length);
     return content.trim();
   };
   return {
@@ -1248,9 +1265,9 @@ function renderHistory() {
     }
     list.innerHTML = history.map((item, i) => `
       <div class="history-item" onclick="loadHistory(${i})">
-        <div class="history-date">${item.date}</div>
-        <div class="history-title">${(item.title||'').split('\n')[0].replace(/^\d+\.\s*/, '').slice(0,40)}</div>
-        <div class="history-branch">📍 ${item.branch} · ${(item.lesson||'').slice(0, 20)}${(item.lesson||'').length > 20 ? '...' : ''}
+        <div class="history-date">${esc(item.date)}</div>
+        <div class="history-title">${esc((item.title||'').split('\n')[0].replace(/^\d+\.\s*/, '').slice(0,40))}</div>
+        <div class="history-branch">📍 ${esc(item.branch)} · ${esc((item.lesson||'').slice(0, 20))}${(item.lesson||'').length > 20 ? '...' : ''}
           ${item.seo && item.seo.total ? `<span class="badge">SEO ${item.seo.total}점</span>` : ''}
         </div>
       </div>
@@ -1267,12 +1284,16 @@ function loadHistory(i) {
     const item = history[i];
     if (!item) return;
 
+    document.getElementById('branch').value = item.branch || '사우점';
+    loadBranchProfile();
+    document.getElementById('keyword').value = item.keyword || '';
+    document.getElementById('intent').value = item.intent || '수업 후기';
     document.getElementById('blogTitle').textContent = item.title;
     document.getElementById('blogBody').innerHTML = renderBlogBody(item.body);
     document.getElementById('instaBody').textContent = item.insta;
     document.getElementById('hashTag').textContent = item.hash;
     document.getElementById('imgText').textContent = item.imgText || '';
-    if (item.seo) renderSeoScore(item.seo);
+    renderSeoScore(item.seo || null);
 
     const recEl = document.getElementById('titleRecommend');
     const recommend = parseTitleRecommend(item.title || '');
@@ -1327,10 +1348,10 @@ function renderLog() {
     }
     list.innerHTML = logs.map((log, i) => `
       <div class="log-item">
-        <div class="log-title">${log.title}</div>
+        <div class="log-title">${esc(log.title)}</div>
         <div class="log-meta">
-          <span class="log-kw">#${log.kw}</span> · 발행일: ${log.date}
-          ${log.url ? ` · <a href="${log.url}" target="_blank" style="color:#3B5BDB">블로그 링크</a>` : ''}
+          <span class="log-kw">#${esc(log.kw)}</span> · 발행일: ${esc(log.date)}
+          ${safeWebUrl(log.url) ? ` · <a href="${esc(safeWebUrl(log.url))}" target="_blank" rel="noopener noreferrer" style="color:#3B5BDB">블로그 링크</a>` : ''}
           <span onclick="deleteLog(${i})" style="color:#ef4444;cursor:pointer;margin-left:8px">삭제</span>
         </div>
       </div>
@@ -1565,7 +1586,7 @@ function imgCardHTML(sc, i, ratio) {
 
 // HTML 이스케이프
 function esc(s) {
-  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // 프롬프트 복사
@@ -1630,6 +1651,10 @@ async function replanScene(id, idx) {
     fd.append('count', count);
     fd.append('ratio', ratio);
     fd.append('scene_hint', `장면 ${idx + 1}을 새로운 각도로 다시 기획해주세요.`);
+    fd.append('blog_title', (document.getElementById('blogTitle').textContent || '').slice(0,200));
+    fd.append('classroom_ref', window._classroomRefDesc || '');
+    fd.append('ref_mode', (document.querySelector('input[name="refMode"]:checked') || {}).value || 'atmosphere');
+    fd.append('gemini_mode', (document.querySelector('input[name="geminiMode"]:checked') || {}).value || 'independent');
 
     const res = await fetch('/api/plan-images', { method: 'POST', body: fd });
     if (!res.ok) throw new Error('서버 오류');
@@ -1722,9 +1747,84 @@ function loadHistoryItem(item) {
   window._lastBranch = item.branch || '전체';
   window._lastTarget = item.target || '초등 전체';
 
-  switchPage('page-write');
+  showPage('write', document.querySelectorAll('.nav-btn')[0]);
   document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
 }
+
+const BRANCH_REGION = {'사우점':['사우동','풍무동','걸포동','북변동'], '장기점':['장기동','운양동'], '구래점':['구래동','마산동','구래역'], '전체':['김포']};
+const PROFILE_IDS = {address:'profileAddress',phone:'profilePhone',hours:'profileHours',class_info:'profileClass',map_url:'profileMap'};
+function safeWebUrl(value) {
+  try {const u = new URL(value); return ['https:','http:'].includes(u.protocol) ? u.href : '';} catch(e) {return '';}
+}
+function localJson(key, fallback) {try {return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));} catch(e) {return fallback;}}
+function readProfileForm() {return Object.fromEntries(Object.entries(PROFILE_IDS).map(([k,id]) => [k,document.getElementById(id).value.trim()]));}
+function saveBranchProfile(silent=false) {
+  try {
+    let profiles = localJson('sns_branch_profiles', {});
+    if (!profiles || Array.isArray(profiles) || typeof profiles !== 'object') profiles = {};
+    profiles[document.getElementById('branch').value] = readProfileForm();
+    localStorage.setItem('sns_branch_profiles', JSON.stringify(profiles));
+    if (!silent) showToast('지점 정보를 저장했습니다.');
+  } catch(e) {showToast('브라우저 저장 공간을 확인해 주세요. 이번 글에는 입력한 정보가 반영됩니다.');}
+}
+function loadBranchProfile() {
+  const branch = document.getElementById('branch').value;
+  const profiles = localJson('sns_branch_profiles', {}) || {};
+  const p = profiles[branch] || {};
+  for (const [k,id] of Object.entries(PROFILE_IDS)) document.getElementById(id).value = String(p[k] || '');
+  const regions = BRANCH_REGION[branch] || ['김포'];
+  document.getElementById('keyword').value = regions[0] + ' 체스학원';
+  const host = document.getElementById('keywordSuggestions'); host.replaceChildren();
+  for (const region of regions) {
+    const btn = document.createElement('button'); btn.type='button';btn.className='btn-small';btn.textContent=region+' 체스학원';
+    btn.onclick=()=>document.getElementById('keyword').value=btn.textContent; host.appendChild(btn);
+  }
+}
+function readRecentPosts() {
+  const history = localJson('sns_history', []), logs = localJson('seo_logs', []);
+  const historyItems = Array.isArray(history) ? history : [];
+  const logItems = Array.isArray(logs) ? logs : [];
+  return [...historyItems.filter(x=>x && typeof x==='object'), ...logItems.filter(x=>x && typeof x==='object')].slice(0,12).map(x=>({title:String(x.title || '').slice(0,400),body:String(x.body || '').slice(0,700)}));
+}
+function exportSettings() {
+  saveBranchProfile(true);
+  const keys=['sns_branch_profiles','sns_history','seo_logs'];
+  const data={version:1}; for (const key of keys) data[key]=localJson(key,key==='sns_branch_profiles'?{}:[]);
+  const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  const a=document.createElement('a');a.href=url;a.download='saenggak-sns-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function importSettings(input) {
+  const file=input.files[0]; if (!file) return;
+  try {
+    if (file.size>4000000) throw new Error();
+    const d=JSON.parse(await file.text());
+    if(d.version!==1 || !d.sns_branch_profiles || typeof d.sns_branch_profiles!=='object' || Array.isArray(d.sns_branch_profiles) || !Array.isArray(d.sns_history) || !Array.isArray(d.seo_logs)) throw new Error();
+    // 백업은 현재 기록과 병합한다. 기존 기록을 지우지 않는다.
+    const profiles=localJson('sns_branch_profiles',{}) || {};
+    for (const b of Object.keys(BRANCH_REGION)) {
+      const q=d.sns_branch_profiles[b]; if(!q || typeof q!=='object') continue;
+      profiles[b]={...(profiles[b]||{}),...Object.fromEntries(Object.keys(PROFILE_IDS).filter(k=>typeof q[k]==='string').map(k=>[k,q[k].slice(0,2000)]))};
+    }
+    const merge=(oldItems,newItems)=>{
+      const seen=new Set();return [...(Array.isArray(oldItems)?oldItems:[]),...newItems].filter(x=>{
+        if(!x || typeof x!=='object' || Array.isArray(x) || typeof x.title!=='string')return false;
+        const key=JSON.stringify([x.title,x.date,x.body]); if(seen.has(key))return false;seen.add(key);return true;
+      }).slice(0,100);
+    };
+    const updates={sns_branch_profiles:profiles,sns_history:merge(localJson('sns_history',[]),d.sns_history),seo_logs:merge(localJson('seo_logs',[]),d.seo_logs)};
+    const previous=Object.fromEntries(Object.keys(updates).map(k=>[k,localStorage.getItem(k)]));
+    try {for(const [k,v] of Object.entries(updates))localStorage.setItem(k,JSON.stringify(v));}
+    catch(e) {for(const [k,v] of Object.entries(previous)){if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v);}throw e;}
+    loadBranchProfile();showToast('백업을 현재 기록과 합쳤습니다.');
+  } catch(e) {showToast('백업 형식 또는 저장 공간을 확인해 주세요.');}
+  input.value='';
+}
+window.addEventListener('DOMContentLoaded',()=>{
+  loadBranchProfile();
+  document.getElementById('branch').addEventListener('change',loadBranchProfile);
+  for(const id of Object.values(PROFILE_IDS)) document.getElementById(id).addEventListener('change',()=>saveBranchProfile(true));
+});
+
 </script>
 </body>
 </html>
