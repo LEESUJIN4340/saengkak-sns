@@ -117,7 +117,7 @@ SYSTEM = """당신은 생각키움연구소 원장의 수업 기록을 자연스
 [내용과 문체]
 후기의 따뜻하고 생동감 있는 이야기체를 유지한다. 자료에 실제로 제공된 대화·후기는 자연스럽게 살린다. 예시 대화가 필요하면 '예를 들어 이렇게 질문합니다'로 분명히 구분하고, 만들어진 고객 후기를 실제 받은 카톡·증언·실제 성과로 제시하지 않는다.
 원장의 관찰→수업에서 한 활동→질문과 지도 방법→그 활동의 목적→학부모가 알아둘 점→해당 지점 상담 순서 중 소재에 맞게 구성한다. 매번 같은 인사말과 '단순한 게임이 아닙니다' 같은 상투어를 반복하지 않는다.
-수업 기록에 없는 학생 이름, 확정 성과, 주소, 시간표, 수강료, 정원, 자격·공식 운영 관계를 단정하지 않는다. 지점 정보는 입력된 것만 쓴다. 실제 관찰과 활동의 교육적 목적을 구분하고 두뇌 발달·성적 향상·생활 변화 등을 보장하지 않는다.
+수업 기록에 없는 수업 날짜(지난주·어제·오늘 등), 학생 이름, 확정 성과, 주소, 시간표, 수강료, 정원, 자격·공식 운영 관계를 단정하지 않는다. 지점 정보는 입력된 것만 쓴다. 실제 관찰과 활동의 교육적 목적을 구분하고 두뇌 발달·성적 향상·생활 변화 등을 보장하지 않는다.
 학부모가 묻는 질문에 구체적으로 답한다. SEO용 어색한 조사, 단어 나열, 과장과 반복을 제거한다. 소제목은 **소제목** 형식. 고정 글자 수를 억지로 채우지 않는다.
 체스 용어 검수: 포크는 한 기물로 상대 기물 둘 이상을 동시에 공격. 핀은 뒤의 기물 때문에 앞의 기물 이동이 제약되는 전술. 절대 핀은 킹을 체크에 노출하는 이동 불가, 상대 핀은 이동 가능하지만 손해 가능. 체스판 상태 없이 전술 수순을 지어내지 않는다.
 최근 글의 제목·도입과 문구를 재사용하지 말고 다른 구체적 관점으로 작성한다. 제목 후보는 장점이 서로 달라야 한다. 해시태그는 해당 글·지점 관련 소수만.
@@ -268,6 +268,28 @@ async def generate(branch: str = Form('사우점'), content_type: str = Form('�
     date_rules = '\n현재 날짜·계절은 date_kst, school_season을 따른다. 학기 중인 시기에 새 학기가 지금 시작된다고 쓰지 않는다. 실제 학교의 방학일은 추측하지 않는다. 소재에 명시된 미래 행사·과거 회고와 현재를 구분한다. 구래점 개원 상태는 gurai_status에 따른다. chess_terms의 정확한 개념을 우선한다. 유아는 놀이·규칙, 초등은 후보 수 비교·실수 복기, 청소년은 분석과 계획, 성인은 취미와 대국 과정에 맞춘다. 수능·입시·성적 향상과 직접 연결된다고 단정하지 않는다.'
     data = await asyncio.to_thread(call_model, SYSTEM + date_rules, context)
     data = validate_article(data, branch)
+    # 실제 생성 시험에서 발견된 검색어 누락과 핀 설명 오류를 보정한다.
+    idx = data['recommended_index']
+    compact = lambda value: re.sub(r'\s+', '', value)
+    if compact(keyword) not in compact(data['titles'][idx]):
+        data['titles'][idx] = keyword + ' | ' + data['titles'][idx]
+    if compact(keyword) not in compact(data['body']):
+        if any(area in keyword for area in BRANCHES[branch]['nearby']):
+            intro = keyword + '을 알아보는 학부모님께 생각키움연구소 ' + branch + '의 수업 방식을 소개합니다.'
+        else:
+            intro = keyword + ' 생각키움연구소' + ('' if branch == '전체' else ' ' + branch) + '의 수업 이야기입니다.'
+        data['body'] = intro + '\n\n' + data['body']
+    if '핀' in lesson:
+        corrected = []
+        replaced = False
+        accurate_pin = '핀은 앞의 기물이 움직일 때 뒤의 기물이 공격받게 되어 이동이 제약되는 전술입니다. 뒤에 킹이 있는 절대 핀에서는 킹을 체크에 노출시키는 이동을 할 수 없습니다. 상대 핀에서는 규칙상 움직일 수 있지만 뒤의 기물을 잃을 수 있어 손익을 비교해야 합니다.'
+        for paragraph in data['body'].split('\n\n'):
+            if re.search(r'핀(?:은|이란|이란\s|\(Pin)', paragraph) and len(paragraph) > 25:
+                corrected.append(accurate_pin + (' 포크는 한 기물로 상대 기물 둘 이상을 동시에 공격하는 전술입니다. 공격 기물이 잡히거나 더 강한 대응이 있으면 이득이 보장되지는 않습니다.' if '포크' in paragraph else ''))
+                replaced = True
+            else:
+                corrected.append(paragraph)
+        data['body'] = '\n\n'.join(corrected)
     data['hashtags'] = build_hashtags(branch, content_type, target, keyword, lesson)
     checks = check_article(data, keyword, branch, profile, history)
     titles = '\n'.join(f'{i+1}. {t}' for i, t in enumerate(data['titles']))
