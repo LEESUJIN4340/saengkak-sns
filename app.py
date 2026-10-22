@@ -19,6 +19,8 @@ ROOT = Path(__file__).resolve().parent
 OUT = ROOT / 'outputs'
 OUT.mkdir(exist_ok=True)
 app = FastAPI(title='생각키움 SNS 매니저 Mobile')
+from private_studio import router as studio_router
+app.include_router(studio_router)
 app.mount('/outputs', StaticFiles(directory=OUT), name='outputs')
 app.mount('/static', StaticFiles(directory=ROOT / 'static'), name='static')
 BRANCHES = {
