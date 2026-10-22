@@ -96,6 +96,14 @@ async def list_photos(request:Request,branch:str):
         pages=store().get_paginator('list_objects_v2').paginate(Bucket=bucket(),Prefix=f'studio/original/{branch}/')
         return [{'key':item['Key'],'size':item['Size']} for page in pages for item in page.get('Contents',[])][:150]
     return {'items':await asyncio.to_thread(load)}
+@router.get('/api/studio/generated')
+async def generated_list(request:Request,branch:str):
+    guard(request)
+    if branch not in BRANCHES: raise HTTPException(422,'지점을 선택해 주세요.')
+    def load():
+        pages=store().get_paginator('list_objects_v2').paginate(Bucket=bucket(),Prefix=f'studio/generated/{branch}/')
+        return [{'key':item['Key'],'size':item['Size']} for page in pages for item in page.get('Contents',[])][:100]
+    return {'items':await asyncio.to_thread(load)}
 @router.get('/api/studio/file')
 async def private_file(request:Request,key:str):
     guard(request)
