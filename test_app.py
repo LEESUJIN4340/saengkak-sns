@@ -15,6 +15,30 @@ class AppTests(unittest.TestCase):
     def setUp(self):
         self.client=TestClient(module.app)
         self.form={'branch':'구래점','content_type':'수업후기','target':'초등 저학년 (1~3학년)','lesson':'핀과 포크 비교'}
+    def test_daangn_page_and_navigation(self):
+        page=self.client.get('/daangn')
+        self.assertEqual(page.status_code,200)
+        self.assertIn('AI로 당근 원고 작성',page.text)
+        self.assertIn('href="/daangn"',self.client.get('/').text)
+
+    def test_daangn_ai_draft(self):
+        sample={'title':'구래점 체스클럽 안내','body':'생각키움연구소 구래점 체스클럽 소식입니다.','missing_info':['일정']}
+        with patch.object(module,'call_model',return_value=sample) as ai:
+            response=self.client.post('/api/daangn-draft',data={'branch':'구래점','topic':'체스클럽','facts':'대상: 누구나'})
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertEqual(response.json()['title'],sample['title'])
+        self.assertEqual(ai.call_args.args[1]['facts'],'대상: 누구나')
+
+    def test_daangn_validation(self):
+        for payload in [
+            {'branch':'전체','topic':'체스클럽'},
+            {'branch':'사우점','topic':' '},
+            {'branch':'장기점','topic':'체스클럽','post_type':'비허용'},
+        ]:
+            self.assertEqual(self.client.post('/api/daangn-draft',data=payload).status_code,422)
+        with patch.object(module,'call_model',return_value={'title':'','body':''}):
+            self.assertEqual(self.client.post('/api/daangn-draft',data={'branch':'사우점','topic':'수업'}).status_code,502)
+
     def test_health_and_mobile_ui(self):
         self.assertEqual(self.client.get('/health').status_code,200)
         html=self.client.get('/').text
