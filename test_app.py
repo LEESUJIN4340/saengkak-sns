@@ -15,6 +15,26 @@ class AppTests(unittest.TestCase):
     def setUp(self):
         self.client=TestClient(module.app)
         self.form={'branch':'구래점','content_type':'수업후기','target':'초등 저학년 (1~3학년)','lesson':'핀과 포크 비교'}
+    def test_studio_private_by_default(self):
+        self.assertEqual(self.client.get('/studio').status_code,200)
+        self.assertEqual(self.client.post('/api/studio/upload',data={'branch':'구래점','kind':'interior'}).status_code,503)
+        self.assertEqual(self.client.get('/api/studio/file',params={'key':'studio/original/구래점/interior/a.jpg'}).status_code,503)
+        self.assertIn('비공개',self.client.get('/studio').text)
+
+    def test_studio_login_and_protected_routes(self):
+        import os
+        from unittest.mock import patch as mock_patch
+        env={'STUDIO_PASSWORD':'test-secret','STUDIO_SESSION_SECRET':'signing-key-for-tests',
+             'STUDIO_BUCKET':'test','STUDIO_S3_ENDPOINT':'https://example.invalid',
+             'STUDIO_S3_ACCESS_KEY':'abc','STUDIO_S3_SECRET_KEY':'def'}
+        with mock_patch.dict(os.environ,env):
+            self.assertEqual(self.client.post('/api/studio/login',data={'password':'wrong'}).status_code,401)
+            self.assertEqual(self.client.get('/api/studio/list',params={'branch':'구래점'}).status_code,401)
+            self.assertEqual(self.client.post('/api/studio/login',data={'password':'test-secret'}).status_code,200)
+            self.assertEqual(self.client.post('/api/studio/generate',data={'branch':'전체','platform':'당근','body':'1234567890','reference_key':'studio/original/x'}).status_code,422)
+            self.assertEqual(self.client.post('/api/studio/logout').status_code,200)
+            self.assertEqual(self.client.get('/api/studio/list',params={'branch':'구래점'}).status_code,401)
+
     def test_daangn_page_and_navigation(self):
         page=self.client.get('/daangn')
         self.assertEqual(page.status_code,200)
