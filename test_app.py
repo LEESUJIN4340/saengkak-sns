@@ -28,6 +28,14 @@ class AppTests(unittest.TestCase):
         self.assertEqual(response.status_code,200,response.text)
         self.assertEqual(response.json()['title'],sample['title'])
         self.assertEqual(ai.call_args.args[1]['facts'],'대상: 누구나')
+        self.assertIn('학원만의 지도 방식',ai.call_args.args[0])
+        self.assertIn('장기점',ai.call_args.args[0])
+
+    def test_daangn_recent_posts_context(self):
+        with patch.object(module,'call_model',return_value={'title':'체스 교육','body':'생각하는 힘을 기르는 체스 교육을 소개합니다.'}) as ai:
+            response=self.client.post('/api/daangn-draft',data={'branch':'사우점','topic':'체스 교육','recent_posts':'[{"title":"지난 글","body":"이전 홍보"}]'})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(ai.call_args.args[1]['recent_posts'][0]['title'],'지난 글')
 
     def test_daangn_validation(self):
         for payload in [
