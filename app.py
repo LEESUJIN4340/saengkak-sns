@@ -263,6 +263,28 @@ def build_hashtags(branch, ctype, target, keyword, lesson):
     return list(dict.fromkeys(tags))
 
 
+
+@app.post('/api/daangn-draft')
+async def daangn_draft(branch: str = Form(...), topic: str = Form(...), facts: str = Form(''), post_type: str = Form('소식')):
+    """당근 비즈프로필용 짧은 원고 생성. 게시 작업은 하지 않는다."""
+    if branch not in ('사우점', '장기점', '구래점') or post_type not in ('소식', '공지', '이벤트'):
+        raise HTTPException(422, '지점 또는 게시 유형을 확인해 주세요.')
+    if not topic.strip() or len(topic) > 100 or len(facts) > 4000:
+        raise HTTPException(422, '주제와 사실 정보를 확인해 주세요.')
+    instruction = """당근 비즈프로필 소식 전문 편집자. JSON 객체만 출력: {"title":"...","body":"...","missing_info":["..."]}.
+제목은 자연스럽고 짧게, 본문은 100~350자 안팎. 지역명과 생각키움연구소 지점을 자연스럽게 표기한다.
+광고성 과장·검색어 반복·허위 후기·확인되지 않은 학생 성과·가짜 행사 일시·없는 혜택을 만들지 않는다.
+사용자가 제공하지 않은 운영 정보는 missing_info에 적고 본문에 사실인 듯 추가하지 않는다.
+학부모가 이해하기 쉬운 자연스러운 한국어로 쓰고, 게시 전 반드시 사실 확인이 필요하다."""
+    data = await asyncio.to_thread(call_model, instruction, {'branch': branch, 'region': BRANCHES[branch]['region'],
+                                'topic': topic, 'facts': facts, 'post_type': post_type})
+    if not isinstance(data, dict) or not isinstance(data.get('title'), str) or not isinstance(data.get('body'), str):
+        raise HTTPException(502, '당근 원고 생성 형식이 올바르지 않습니다.')
+    title, body = data['title'].strip(), data['body'].strip()
+    if not title or len(body) < 4:
+        raise HTTPException(502, '당근 원고가 불완전합니다. 다시 생성해 주세요.')
+    return {'title': title[:160], 'body': body[:3000], 'missing_info': data.get('missing_info', [])}
+
 @app.post('/api/generate')
 async def generate(branch: str = Form('사우점'), content_type: str = Form('수업후기'),
                    target: str = Form('초등 전체'), lesson: str = Form(...),
