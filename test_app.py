@@ -28,7 +28,7 @@ class AppTests(unittest.TestCase):
         self.assertEqual(response.status_code,200,response.text)
         self.assertEqual(response.json()['title'],sample['title'])
         self.assertEqual(ai.call_args.args[1]['facts'],'대상: 누구나')
-        self.assertIn('학원만의 지도 방식',ai.call_args.args[0])
+        self.assertIn('짧고 구체적이며 겸손한',ai.call_args.args[0])
         self.assertIn('장기점',ai.call_args.args[0])
 
     def test_daangn_recent_posts_context(self):
