@@ -33,6 +33,10 @@ PROFILE_FIELDS = ('address', 'phone', 'hours', 'class_info', 'map_url')
 async def root():
     return (ROOT / 'static/index.html').read_text(encoding='utf-8')
 
+@app.get('/daangn', response_class=HTMLResponse)
+async def daangn_page():
+    return (ROOT / 'static/daangn.html').read_text(encoding='utf-8')
+
 @app.get('/health')
 async def health():
     return {'status': 'ok', 'version': '2026.10-story-v2'}
