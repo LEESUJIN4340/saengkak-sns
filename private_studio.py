@@ -134,13 +134,32 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
         images=[]
         for i,data in enumerate(refs):
             stream=io.BytesIO(data);stream.name=f'reference_{i}.jpg';images.append(stream)
-        prompt=('Create a photorealistic, natural-looking promotional illustration for a Korean chess academy. '
-                'Preserve the reference classroom layout and furniture closely. If a portrait is provided, '
-                'use it as reference for the adult instructor only; do not invent identifiable real students. '
-                'Use chess pieces on a credible 8x8 board. No text, logos, labels or watermarks. '
-                'Do not imply a fabricated scene is a documentary photograph. '
-                f'Branch: {branch}. Channel: {platform}. Content theme: {body[:1400]}.')
-        result=client.images.edit(model=os.getenv('OPENAI_IMAGE_MODEL','gpt-image-1'),image=images,prompt=prompt,size='1024x1024')
+        # The classroom photo is the image to EDIT, not merely an inspiration.
+        # Keep the original academy recognisable; never hallucinate a teacher.
+        prompt=(
+            'Edit the FIRST provided photograph. It is the actual interior of a Korean chess academy, '
+            'and must remain the recognisable main subject of the finished promotional image. '
+            'This is PHOTO EDITING, NOT a new imagined classroom or a stock photograph. '
+            'Keep the original walls, windows, flooring, shelves, tables, chairs, furniture placement, '
+            'perspective, colors and architectural details as close to the source as possible. '
+            'Do not replace the room, introduce a different building, or change the academy identity. '
+            'Natural professional photography, coherent realistic lighting, sharp details, no artificial gloss. '
+            'The promotion is about children learning concentration, problem-solving, observing positions, '
+            'choosing moves and reviewing chess games. If the original photo contains students, preserve '
+            'their existing appearance rather than changing their identity. If the room is empty, show '
+            'a beautiful and inviting REALISTIC EMPTY CLASSROOM with neatly arranged chessboards and '
+            'teaching materials; do not invent students or adults. '
+            'NEVER add a man, adult teacher, foreign instructor, celebrity, or any new identifiable person. '
+            'If a SECOND reference portrait is provided, it is an identity reference only: do not add '
+            'that person unless already present in the classroom photograph. '
+            'Keep any visible chessboards eight-by-eight with correctly alternating squares and '
+            'plausible chess pieces. No added text, logos, watermarks, fake signage, or overlays. '
+            'Do not imply an AI-created scene is a documentary record of an actual lesson. '
+            f'Academy branch: {branch}. Publication channel: {platform}. '
+            f'Post theme for atmosphere only (do not invent objects or people): {body[:1200]}.'
+        )
+        result=client.images.edit(model=os.getenv('OPENAI_IMAGE_MODEL','gpt-image-1'),image=images,
+                                  prompt=prompt,size='1024x1024',input_fidelity='high')
         import base64
         return base64.b64decode(result.data[0].b64_json)
     try:
