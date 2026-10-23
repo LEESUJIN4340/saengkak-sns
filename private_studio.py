@@ -118,11 +118,12 @@ async def delete_file(request:Request,key:str):
     await asyncio.to_thread(lambda:store().delete_object(Bucket=bucket(),Key=safe_key(key)))
     return {'ok':True}
 @router.post('/api/studio/generate')
-async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),body:str=Form(...),reference_key:str=Form(...),owner_key:str=Form(''),scene_mode:str=Form('preserve')):
+async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),body:str=Form(...),reference_key:str=Form(...),owner_key:str=Form(''),scene_mode:str=Form('preserve'),activity:str=Form('auto')):
     guard(request)
     if branch not in BRANCHES or platform not in ('당근','블로그','인스타그램') or not 10<=len(body)<=3000:
         raise HTTPException(422,'지점·채널·본문을 확인해 주세요.')
     if scene_mode not in ('preserve','students'): raise HTTPException(422,'이미지 제작 방식을 확인해 주세요.')
+    if activity not in ('auto','discussion','review','decision','language'): raise HTTPException(422,'수업 장면을 선택해 주세요.')
     prefix=f'studio/original/{branch}/'
     if not reference_key.startswith(prefix+'interior/'): raise HTTPException(422,'해당 지점의 실내 사진을 선택해 주세요.')
     if owner_key and not owner_key.startswith(prefix+'owner/'): raise HTTPException(422,'해당 지점의 원장 사진을 선택해 주세요.')
@@ -138,13 +139,18 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
             stream=io.BytesIO(data);stream.name=f'reference_{i}.jpg';images.append(stream)
         # The classroom photo is the image to EDIT, not merely an inspiration.
         # Keep the original academy recognisable; never hallucinate a teacher.
+        activity_prompts = {'discussion':'Two students face each other over one chessboard and discuss a move together.', 'review':'Two students sit together, one replays a chess move and the other checks the scoresheet.', 'decision':'Two students face each other and attentively play a chess game.', 'language':'Two students point to chess pieces together while practicing vocabulary.'}
+        selected = activity if activity != 'auto' else ('review' if '복기' in body else 'language' if '영어' in body or '중국어' in body else 'decision')
         scene_instruction = (
             'Do not add any new people. Retouch the real classroom photograph only, '
             'preserving its original composition and actual occupants.'
             if scene_mode == 'preserve' else
             'Create a clearly staged, fictional promotional illustration based on this REAL room. '
-            'Add at most four Korean elementary-age children, naturally sitting at existing desks, '
-            'viewed from behind or side with no identifiable faces. They should be thoughtfully '
+            'Add exactly two fictional Korean elementary-age students at one existing desk, '
+            'engaged with each other and the same chessboard. ' + activity_prompts[selected] + ' ' 
+            'They should be visibly collaborating, discussing or actively playing, not merely posing. ' 
+            'Avoid isolated, bored, upset or sulking expressions and disconnected activities. ' 
+            'They should be thoughtfully '
             'studying chessboards and reviewing moves. Keep the REAL room architecture unchanged. '
             'Do not add any adults or instructors. Do not portray the scene as a documentary photograph.'
         )
@@ -179,4 +185,4 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
         import logging
         logging.getLogger(__name__).exception('Private studio image creation failed')
         raise HTTPException(502,'이미지 제작에 실패했습니다. 서버 로그의 오류 유형과 이미지 모델 설정을 확인해 주세요.') from exc
-    return {'key':key,'url':'/api/studio/file?key='+key,'note':'게시 전에 실제 학원 환경과 일치하는지 검수해 주세요.'}
+    return {'key':key,'url':'/api/studio/file?key='+key,'activity':selected,'note':'게시 전에 실제 학원 환경과 일치하는지 검수해 주세요.'}
