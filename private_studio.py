@@ -185,4 +185,4 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
         import logging
         logging.getLogger(__name__).exception('Private studio image creation failed')
         raise HTTPException(502,'이미지 제작에 실패했습니다. 서버 로그의 오류 유형과 이미지 모델 설정을 확인해 주세요.') from exc
-    return {'key':key,'url':'/api/studio/file?key='+key,'activity':selected,'note':'게시 전에 실제 학원 환경과 일치하는지 검수해 주세요.'}
+    return {'key':key,'url':'/api/studio/file?key='+key,'activity':(activity if activity != 'auto' else ('review' if '복기' in body else 'language' if '영어' in body or '중국어' in body else 'decision')),'note':'게시 전에 실제 학원 환경과 일치하는지 검수해 주세요.'}
