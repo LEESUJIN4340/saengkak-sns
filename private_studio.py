@@ -13,6 +13,8 @@ router=APIRouter()
 BRANCHES={'구래점','사우점','장기점'}
 MAX_BYTES=8*1024*1024
 COOKIE='saenggak_studio'
+# Prevent simultaneous paid image calls within this single-worker service.
+_GENERATION_LOCK=asyncio.Lock()
 def configured():
     return all(os.getenv(x) for x in ('STUDIO_PASSWORD','STUDIO_SESSION_SECRET','STUDIO_BUCKET','STUDIO_S3_ENDPOINT','STUDIO_S3_ACCESS_KEY','STUDIO_S3_SECRET_KEY'))
 def require_config():
@@ -128,6 +130,7 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
     if not reference_key.startswith(prefix+'interior/'): raise HTTPException(422,'해당 지점의 실내 사진을 선택해 주세요.')
     if owner_key and not owner_key.startswith(prefix+'owner/'): raise HTTPException(422,'해당 지점의 원장 사진을 선택해 주세요.')
     if not os.getenv('OPENAI_API_KEY'): raise HTTPException(503,'이미지 생성 API 키가 설정되지 않았습니다.')
+    if _GENERATION_LOCK.locked(): raise HTTPException(429,'이미지 제작이 진행 중입니다. 중복 요청하지 마세요.')
     refs=[await asyncio.to_thread(get_bytes,reference_key)]
     if owner_key and scene_mode == 'students': raise HTTPException(422,'학생 연출 모드에서는 원장 사진을 사용하지 않습니다.')
     if owner_key: refs.append(await asyncio.to_thread(get_bytes,owner_key))
@@ -150,6 +153,8 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
             'engaged with each other and the same chessboard. ' + activity_prompts[selected] + ' ' 
             'They should be visibly collaborating, discussing or actively playing, not merely posing. ' 
             'Avoid isolated, bored, upset or sulking expressions and disconnected activities. ' 
+            'Children must share attention, eye-lines, and a believable conversational gesture. ' 
+            'Do not pose with two fingers pointing to an unrelated paper. ' 
             'They should be thoughtfully '
             'studying chessboards and reviewing moves. Keep the REAL room architecture unchanged. '
             'Do not add any adults or instructors. Do not portray the scene as a documentary photograph.'
@@ -161,13 +166,22 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
             'Keep the original walls, windows, flooring, shelves, tables, chairs, furniture placement, '
             'perspective, colors and architectural details as close to the source as possible. '
             'Do not replace the room, introduce a different building, or change the academy identity. '
-            'Natural professional photography, coherent realistic lighting, sharp details, no artificial gloss. '
+            'Natural professional photography, coherent realistic lighting, sharp details, no artificial gloss. ' 
+            'Match the camera height, lens perspective, depth of field, contact shadows and reflections. ' 
+            'The dark classroom windows are reflective: any newly inserted pupils should have ' 
+            'physically plausible subtle reflections ONLY where geometry allows; do not fabricate ' 
+            'mirror-like reflections or change existing window reflections. '
             'The promotion is about chess education, concentration, observation, choice and review. '
             'Never create an adult instructor or celebrity. '
             'If a second portrait is provided, treat it only as an identity reference for an existing '
             'adult in the source photo; never add an adult to the room. '
             'Keep any visible chessboards eight-by-eight with correctly alternating squares and '
-            'plausible chess pieces. No added text, logos, watermarks, fake signage, or overlays. '
+            'plausible chess pieces. Preserve the photographed chess pieces instead of redrawing them. ' 
+            'If they cannot be preserved, avoid prominent close-ups of distorted pieces. ' 
+            'Keep a consistent 8x8 board with one piece per square, correct proportions and ' 
+            'clearly distinct kings, queens, rooks, bishops, knights and pawns. ' 
+            'No duplicated fingers, malformed hands, garbled papers, text, logos, watermarks, ' 
+            'fake signage, or overlays. '
             'Do not imply an AI-created scene is a documentary record of an actual lesson. '
             f'Academy branch: {branch}. Publication channel: {platform}. '
             f'Post theme for atmosphere only (do not invent objects or people): {body[:1200]}.'
@@ -177,9 +191,10 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
         import base64
         return base64.b64decode(result.data[0].b64_json)
     try:
-        generated=await asyncio.to_thread(create)
-        key=f'studio/generated/{branch}/{uuid.uuid4().hex}.png'
-        await asyncio.to_thread(put_bytes,key,generated,'image/png')
+        async with _GENERATION_LOCK:
+            generated=await asyncio.to_thread(create)
+            key=f'studio/generated/{branch}/{uuid.uuid4().hex}.png'
+            await asyncio.to_thread(put_bytes,key,generated,'image/png')
     except Exception as exc:
         # Do not expose private storage credentials or API error bodies to clients.
         import logging
