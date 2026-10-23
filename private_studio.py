@@ -118,15 +118,17 @@ async def delete_file(request:Request,key:str):
     await asyncio.to_thread(lambda:store().delete_object(Bucket=bucket(),Key=safe_key(key)))
     return {'ok':True}
 @router.post('/api/studio/generate')
-async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),body:str=Form(...),reference_key:str=Form(...),owner_key:str=Form('')):
+async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),body:str=Form(...),reference_key:str=Form(...),owner_key:str=Form(''),scene_mode:str=Form('preserve')):
     guard(request)
     if branch not in BRANCHES or platform not in ('당근','블로그','인스타그램') or not 10<=len(body)<=3000:
         raise HTTPException(422,'지점·채널·본문을 확인해 주세요.')
+    if scene_mode not in ('preserve','students'): raise HTTPException(422,'이미지 제작 방식을 확인해 주세요.')
     prefix=f'studio/original/{branch}/'
     if not reference_key.startswith(prefix+'interior/'): raise HTTPException(422,'해당 지점의 실내 사진을 선택해 주세요.')
     if owner_key and not owner_key.startswith(prefix+'owner/'): raise HTTPException(422,'해당 지점의 원장 사진을 선택해 주세요.')
     if not os.getenv('OPENAI_API_KEY'): raise HTTPException(503,'이미지 생성 API 키가 설정되지 않았습니다.')
     refs=[await asyncio.to_thread(get_bytes,reference_key)]
+    if owner_key and scene_mode == 'students': raise HTTPException(422,'학생 연출 모드에서는 원장 사진을 사용하지 않습니다.')
     if owner_key: refs.append(await asyncio.to_thread(get_bytes,owner_key))
     def create():
         from openai import OpenAI
@@ -136,7 +138,17 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
             stream=io.BytesIO(data);stream.name=f'reference_{i}.jpg';images.append(stream)
         # The classroom photo is the image to EDIT, not merely an inspiration.
         # Keep the original academy recognisable; never hallucinate a teacher.
-        prompt=(
+        scene_instruction = (
+            'Do not add any new people. Retouch the real classroom photograph only, '
+            'preserving its original composition and actual occupants.'
+            if scene_mode == 'preserve' else
+            'Create a clearly staged, fictional promotional illustration based on this REAL room. '
+            'Add at most four Korean elementary-age children, naturally sitting at existing desks, '
+            'viewed from behind or side with no identifiable faces. They should be thoughtfully '
+            'studying chessboards and reviewing moves. Keep the REAL room architecture unchanged. '
+            'Do not add any adults or instructors. Do not portray the scene as a documentary photograph.'
+        )
+        prompt=(scene_instruction + ' '
             'Edit the FIRST provided photograph. It is the actual interior of a Korean chess academy, '
             'and must remain the recognisable main subject of the finished promotional image. '
             'This is PHOTO EDITING, NOT a new imagined classroom or a stock photograph. '
@@ -144,14 +156,10 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
             'perspective, colors and architectural details as close to the source as possible. '
             'Do not replace the room, introduce a different building, or change the academy identity. '
             'Natural professional photography, coherent realistic lighting, sharp details, no artificial gloss. '
-            'The promotion is about children learning concentration, problem-solving, observing positions, '
-            'choosing moves and reviewing chess games. If the original photo contains students, preserve '
-            'their existing appearance rather than changing their identity. If the room is empty, show '
-            'a beautiful and inviting REALISTIC EMPTY CLASSROOM with neatly arranged chessboards and '
-            'teaching materials; do not invent students or adults. '
-            'NEVER add a man, adult teacher, foreign instructor, celebrity, or any new identifiable person. '
-            'If a SECOND reference portrait is provided, it is an identity reference only: do not add '
-            'that person unless already present in the classroom photograph. '
+            'The promotion is about chess education, concentration, observation, choice and review. '
+            'Never create an adult instructor or celebrity. '
+            'If a second portrait is provided, treat it only as an identity reference for an existing '
+            'adult in the source photo; never add an adult to the room. '
             'Keep any visible chessboards eight-by-eight with correctly alternating squares and '
             'plausible chess pieces. No added text, logos, watermarks, fake signage, or overlays. '
             'Do not imply an AI-created scene is a documentary record of an actual lesson. '
@@ -159,13 +167,16 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
             f'Post theme for atmosphere only (do not invent objects or people): {body[:1200]}.'
         )
         result=client.images.edit(model=os.getenv('OPENAI_IMAGE_MODEL','gpt-image-1'),image=images,
-                                  prompt=prompt,size='1024x1024',input_fidelity='high')
+                                  prompt=prompt,size='1024x1024',input_fidelity='high',quality='high')
         import base64
         return base64.b64decode(result.data[0].b64_json)
     try:
         generated=await asyncio.to_thread(create)
         key=f'studio/generated/{branch}/{uuid.uuid4().hex}.png'
         await asyncio.to_thread(put_bytes,key,generated,'image/png')
-    except Exception:
-        raise HTTPException(502,'이미지 생성 또는 비공개 저장에 실패했습니다. API 설정과 저장소를 확인해 주세요.')
+    except Exception as exc:
+        # Do not expose private storage credentials or API error bodies to clients.
+        import logging
+        logging.getLogger(__name__).exception('Private studio image creation failed')
+        raise HTTPException(502,'이미지 제작에 실패했습니다. 서버 로그의 오류 유형과 이미지 모델 설정을 확인해 주세요.') from exc
     return {'key':key,'url':'/api/studio/file?key='+key,'note':'게시 전에 실제 학원 환경과 일치하는지 검수해 주세요.'}
