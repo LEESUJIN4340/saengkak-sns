@@ -373,6 +373,22 @@ async def generate(branch: str = Form('사우점'), content_type: str = Form('�
 
     if content_type in ('오픈안내', '신규모집', '이벤트'):
         mode_rules += ' 홍보글에서 대상 수준을 분명하게 소개하되 다른 지점의 반을 섞어 쓰지 않는다.'
+    mode_rules += (
+        '\\n[원장 전문 자격] 이수진 원장은 FIDE 공인 학교체스지도자 자격을 보유한다. '
+        '원장의 학교체스지도자 자격은 전 지점 공통 교육 전문성으로 소개할 수 있으나, '
+        '일반 강사 전원이 학교체스지도자 자격을 보유한다고 확대 해석하지 않는다. '
+        '원장의 FIDE 공인 학교체스지도자 자격과 강사진의 FIDE 공인 트레이너 자격을 구분하여 표기한다.'
+    )
+    if branch in ('사우점', '전체'):
+        mode_rules += (
+            '\\n[사우점 대표 배출 선수] 생각키움연구소 사우점은 국가대표이자 '
+            'FIDE CM(Candidate Master) 타이틀을 보유한 이영규 선수를 배출했다. '
+            '사우점의 중급·상급·선수반 또는 교육 성과를 소개할 때 자연스럽게 강조한다. '
+            '구래점이나 장기점에서 배출한 것처럼 쓰지 않는다. '
+            '선발 연도·획득 대회·기타 수상 실적을 임의로 추가하지 않으며, '
+            '다른 학생에게 같은 성과를 보장하지 않는다.'
+        )
+
     data = await asyncio.to_thread(call_model, SYSTEM + date_rules + '\\n[콘텐츠 유형별 우선 규칙]\\n' + mode_rules, context)
     data = validate_article(data, branch)
     # 실제 생성 시험에서 발견된 검색어 누락과 핀 설명 오류를 보정한다.
