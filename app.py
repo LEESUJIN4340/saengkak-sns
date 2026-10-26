@@ -325,7 +325,7 @@ def mandatory_promo_checks(data, branch, content_type, lesson=''):
                   '장기점': ('입문', '기본')}
         if branch in levels and not all(word in compact for word in levels[branch]):
             missing.append('지점별 수업 수준')
-        if branch == '구래점' and any(word in topic for word in ('영어체스', '중국어체스', '외국어체스')):
+        if branch == '구래점' and (content_type == '오픈안내' or any(word in topic for word in ('영어체스', '중국어체스', '외국어체스'))):
             if not all(word in compact for word in ('영어', '중국어')):
                 missing.append('외국어 체스 과정')
     if '[연락처]' in body or '[전화번호]' in body:
