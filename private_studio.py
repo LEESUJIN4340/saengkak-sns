@@ -100,6 +100,16 @@ async def list_photos(request:Request,branch:str):
         pages=store().get_paginator('list_objects_v2').paginate(Bucket=bucket(),Prefix=f'studio/original/{branch}/')
         return [{'key':item['Key'],'size':item['Size']} for page in pages for item in page.get('Contents',[])][:150]
     return {'items':await asyncio.to_thread(load)}
+@router.get('/api/studio/shared-pieces')
+async def shared_pieces(request:Request):
+    guard(request)
+    def load():
+        items=[]
+        for branch in sorted(BRANCHES):
+            pages=store().get_paginator('list_objects_v2').paginate(Bucket=bucket(),Prefix=f'studio/original/{branch}/pieces/')
+            items.extend({'key':item['Key'],'branch':branch,'size':item['Size']} for page in pages for item in page.get('Contents',[]))
+        return items[:150]
+    return {'items':await asyncio.to_thread(load)}
 @router.get('/api/studio/generated')
 async def generated_list(request:Request,branch:str):
     guard(request)
@@ -150,8 +160,8 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
     if not reference_key.startswith(prefix+'interior/'): raise HTTPException(422,'해당 지점의 실내 사진을 선택해 주세요.')
     if owner_key and not owner_key.startswith(prefix+'owner/'): raise HTTPException(422,'해당 지점의 원장 사진을 선택해 주세요.')
     piece_keys=[k.strip() for k in pieces_keys.split(',') if k.strip()]
-    if len(piece_keys)>5 or len(set(piece_keys))!=len(piece_keys) or any(not k.startswith(prefix+'pieces/') or not k.endswith('.jpg') for k in piece_keys):
-        raise HTTPException(422,'체스 기물 참고사진은 같은 지점에서 최대 5장까지 선택해 주세요.')
+    if len(piece_keys)>5 or len(set(piece_keys))!=len(piece_keys) or any(not any(k.startswith(f'studio/original/{b}/pieces/') for b in BRANCHES) or not k.endswith('.jpg') for k in piece_keys):
+        raise HTTPException(422,'체스 기물 참고사진은 전체 지점에서 최대 5장까지 선택해 주세요.')
     if not os.getenv('OPENAI_API_KEY'): raise HTTPException(503,'이미지 생성 API 키가 설정되지 않았습니다.')
     if not request_id or len(request_id)>100 or not all(ch.isalnum() or ch in '-_' for ch in request_id):
         raise HTTPException(422,'이미지 요청 식별자가 올바르지 않습니다. 페이지를 새로고침해 주세요.')
