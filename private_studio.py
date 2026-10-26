@@ -185,7 +185,7 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
             'Do not add any new people. Retouch the real classroom photograph only, '
             'preserving its original composition and actual occupants.'
             if scene_mode == 'preserve' else
-            'Create a clearly staged, fictional promotional illustration based on this REAL room. '
+            'Create a clearly staged, fictional promotional illustration based on this REAL room. ' 'COMPOSITION FIRST: Make children playing chess the unmistakable main subject in the CENTRAL 60 percent of the frame. Place a believable pair of students facing each other across a chessboard near the middle of the classroom, with both faces, upper bodies, hands and the shared board clearly visible and not cut off by the frame. Other students may be in the background only when already present or when there is adequate seating. Avoid lone children sitting apart at the far right or left, empty central desks dominating the foreground, and students whose heads or arms are cropped by the image boundary. Keep balanced left-right visual weight and a natural eye-level documentary-style camera perspective. Use the original room as context, not as the visual focal point. '
             'Add up to two fictional elementary-age students only if the original photograph has clearly available seating at an existing desk, '
             'engaged with each other and the same chessboard. ' + activity_prompts[selected] + ' ' 
             'They should be visibly collaborating, discussing or actively playing, not merely posing. ' 
