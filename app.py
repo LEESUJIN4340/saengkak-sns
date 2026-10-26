@@ -693,12 +693,41 @@ async def generate(
     branch_info_section = ""
     for key, info in branch_info_map.items():
         if key in branch:
-            branch_info_section = f"\n{info}"
+            branch_info_section = (
+                f"\n[{key} 필수 반영 정보 — 아래 내용을 글 본문에 자연스럽게 녹여야 합니다]\n"
+                f"내용/메모가 짧거나 비어있어도 아래 정보를 바탕으로 글을 풍성하게 채우세요.\n"
+                f"{info}"
+                f"\n[강사 전문성 — 활용 기준]\n"
+                f"• 모든 강사: FIDE 공인 트레이너 + 대한체스연맹 심판 자격 + 유아교육 전문가\n"
+                f"• 이수진 원장: FIDE 공인 학교체스지도자 자격 보유\n"
+                f"• 아래 유형의 글에서는 자연스럽게 1회 언급하세요:\n"
+                f"  - 학원 소개 / 오픈 / 신규 모집 / 강사 소개 / 커리큘럼 안내 글\n"
+                f"• 아래 유형의 글에서는 굳이 언급하지 않아도 됩니다:\n"
+                f"  - 수업 후기 / 대회 후기 / 체스 전술 설명 / 학생 성장 스토리\n"
+                f"• 언급할 때는 자격증 나열이 아니라 수업 장면 속 행동으로 보여주세요.\n"
+                f"  예) '선생님은 아이가 스스로 답을 찾을 때까지 기다렸습니다. "
+                f"유아 발달을 전공한 선생님답게, 아이의 속도를 존중하는 방식입니다.'\n"
+            )
             break
 
     target_section = f"\n[대상별 강조점]\n{target_ctx}" if target_ctx else ""
     title_keyword = kws[0] if kws else "김포체스학원"
     secondary_kws = ", ".join(kws[1:3]) if len(kws) > 1 else ""
+
+    # 내용/메모가 너무 짧으면 지점별 기본 소재로 자동 보완
+    if len((lesson or "").strip()) < 20:
+        default_lesson_map = {
+            "구래점": "구래점 오픈 소식, FIDE 공인 트레이너 강사진 소개, 입문~중급반 운영, 체스로 사고력 키우기",
+            "사우점": "사고력체스 수업 현장, FIDE 공인 트레이너 지도, 중급~선수반 운영, 스스로 생각하는 힘 키우기",
+            "장기점": "체스 첫걸음, FIDE 공인 트레이너 강사진, 입문~기본반 운영, 유아·초등 사고력 체스",
+        }
+        for key, default in default_lesson_map.items():
+            if key in branch:
+                if not lesson or lesson.strip() == "":
+                    lesson = default
+                else:
+                    lesson = lesson.strip() + " / " + default
+                break
 
     # 대화 유형 힌트 생성 (수업 내용에 학부모 언급이 있으면 B/C 유형 우선 안내)
     parent_hint = ""
