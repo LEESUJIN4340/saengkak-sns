@@ -561,6 +561,53 @@ def image_to_data_url(data: bytes, content_type: str):
 async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/daangn", response_class=HTMLResponse)
+async def daangn_page():
+    return HTMLResponse((BASE / "static" / "daangn.html").read_text(encoding="utf-8"))
+
+@app.get("/studio", response_class=HTMLResponse)
+async def studio_page():
+    return HTMLResponse((BASE / "static" / "studio.html").read_text(encoding="utf-8"))
+
+@app.post("/api/daangn-draft")
+async def daangn_draft(
+    branch: str = Form(...),
+    post_type: str = Form(...),
+    topic: str = Form(...),
+    facts: str = Form(""),
+    recent_posts: str = Form("[]")
+):
+    if branch not in ("구래점", "사우점", "장기점"):
+        raise HTTPException(400, "지점을 확인해 주세요.")
+    prompt = (
+        f"지점: {branch}\\n유형: {post_type}\\n주제: {topic}\\n"
+        f"사용자가 확인한 실제 사실: {facts or '(추가 정보 없음)'}\\n"
+        "당근 비즈프로필용 한국어 소식 원고를 작성하세요. "
+        "제목은 30자 이내, 본문은 200~450자. 친근하지만 신뢰감 있게 쓰세요. "
+        "학생 발언, 학부모 상담, 수업 장면, 할인, 일정, 체험수업을 지어내지 마세요. "
+        "실제 사실이 없으면 일반적인 교육 소개만 작성하세요. "
+        "오직 JSON 객체로 답하세요: "
+        '{"title":"제목","body":"본문","missing_info":[]}'
+    )
+    try:
+        c = get_client()
+        r = c.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role":"system","content":"사실에 근거한 한국어 학원 소식 전문 편집자입니다. JSON만 출력합니다."},
+                      {"role":"user","content":prompt}],
+            response_format={"type":"json_object"},
+            max_tokens=900,
+            temperature=0.5
+        )
+        data = json.loads(r.choices[0].message.content or "{}")
+        return {"title": str(data.get("title", "")),
+                "body": str(data.get("body", "")),
+                "missing_info": data.get("missing_info", [])}
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(500, "당근 원고 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.")
+
 @app.get("/health")
 async def health():
     return {"ok": True}
