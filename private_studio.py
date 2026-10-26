@@ -1,5 +1,5 @@
 """Private photo studio. Originals stay in private S3-compatible storage, never /outputs."""
-import asyncio, io, os, secrets, uuid, hashlib
+import asyncio, io, os, secrets, uuid, hashlib, time
 from datetime import datetime, timezone
 from pathlib import PurePosixPath
 import boto3
@@ -15,6 +15,8 @@ MAX_BYTES=8*1024*1024
 COOKIE='saenggak_studio'
 # Prevent simultaneous paid image calls within this single-worker service.
 _GENERATION_LOCK=asyncio.Lock()
+_RECENT_REQUESTS={}
+_REQUEST_TTL=600
 def configured():
     return all(os.getenv(x) for x in ('STUDIO_PASSWORD','STUDIO_SESSION_SECRET','STUDIO_BUCKET','STUDIO_S3_ENDPOINT','STUDIO_S3_ACCESS_KEY','STUDIO_S3_SECRET_KEY'))
 def require_config():
@@ -120,7 +122,7 @@ async def delete_file(request:Request,key:str):
     await asyncio.to_thread(lambda:store().delete_object(Bucket=bucket(),Key=safe_key(key)))
     return {'ok':True}
 @router.post('/api/studio/generate')
-async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),body:str=Form(...),reference_key:str=Form(...),owner_key:str=Form(''),scene_mode:str=Form('preserve'),activity:str=Form('auto')):
+async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),body:str=Form(...),reference_key:str=Form(...),owner_key:str=Form(''),scene_mode:str=Form('preserve'),activity:str=Form('auto'),request_id:str=Form('')):
     guard(request)
     if branch not in BRANCHES or platform not in ('당근','블로그','인스타그램') or not 10<=len(body)<=3000:
         raise HTTPException(422,'지점·채널·본문을 확인해 주세요.')
@@ -130,6 +132,12 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
     if not reference_key.startswith(prefix+'interior/'): raise HTTPException(422,'해당 지점의 실내 사진을 선택해 주세요.')
     if owner_key and not owner_key.startswith(prefix+'owner/'): raise HTTPException(422,'해당 지점의 원장 사진을 선택해 주세요.')
     if not os.getenv('OPENAI_API_KEY'): raise HTTPException(503,'이미지 생성 API 키가 설정되지 않았습니다.')
+    if not request_id or len(request_id)>100 or not all(ch.isalnum() or ch in '-_' for ch in request_id):
+        raise HTTPException(422,'이미지 요청 식별자가 올바르지 않습니다. 페이지를 새로고침해 주세요.')
+    now=time.monotonic()
+    for token,stamp in list(_RECENT_REQUESTS.items()):
+        if now-stamp>_REQUEST_TTL: _RECENT_REQUESTS.pop(token,None)
+    if request_id in _RECENT_REQUESTS: raise HTTPException(409,'이미 요청한 이미지입니다. 완성 이미지 목록을 확인해 주세요.')
     if _GENERATION_LOCK.locked(): raise HTTPException(429,'이미지 제작이 진행 중입니다. 중복 요청하지 마세요.')
     refs=[await asyncio.to_thread(get_bytes,reference_key)]
     if owner_key and scene_mode == 'students': raise HTTPException(422,'학생 연출 모드에서는 원장 사진을 사용하지 않습니다.')
@@ -143,7 +151,7 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
         # The classroom photo is the image to EDIT, not merely an inspiration.
         # Keep the original academy recognisable; never hallucinate a teacher.
         activity_prompts = {'discussion':'Two students face each other over one chessboard and discuss a move together.', 'review':'Two students sit together, one replays a chess move and the other checks the scoresheet.', 'decision':'Two students face each other and attentively play a chess game.', 'language':'Two students point to chess pieces together while practicing vocabulary.'}
-        selected = activity if activity != 'auto' else ('review' if '복기' in body else 'language' if '영어' in body or '중국어' in body else 'decision')
+        selected = activity if activity != 'auto' else ('review' if '복기' in body else 'language' if '영어' in body or '중국어' in body else 'discussion' if '토론' in body or '의견' in body else 'decision')
         scene_instruction = (
             'Do not add any new people. Retouch the real classroom photograph only, '
             'preserving its original composition and actual occupants.'
@@ -192,9 +200,13 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
         return base64.b64decode(result.data[0].b64_json)
     try:
         async with _GENERATION_LOCK:
+            if request_id in _RECENT_REQUESTS: raise HTTPException(409,'중복 요청입니다. 완성 이미지 목록을 확인해 주세요.')
+            _RECENT_REQUESTS[request_id]=time.monotonic()
             generated=await asyncio.to_thread(create)
             key=f'studio/generated/{branch}/{uuid.uuid4().hex}.png'
             await asyncio.to_thread(put_bytes,key,generated,'image/png')
+    except HTTPException:
+        raise
     except Exception as exc:
         # Do not expose private storage credentials or API error bodies to clients.
         import logging
