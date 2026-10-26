@@ -344,6 +344,13 @@ async def generate(branch: str = Form('사우점'), content_type: str = Form('�
         mode_rules = '오픈·모집·이벤트 홍보글은 첫 단락에서 지점과 혜택을 명확히 안내하고, 대상·수업 특징·참여 조건·위치·상담 정보를 확인된 범위에서 제시한다. 일반적인 체스 효과 설명이나 전술 이야기를 길게 쓰지 않는다. 구래점의 사고력 체스·영어체스·중국어체스, 장기점의 사고력 체스·보드게임·그래비트랙스, 사우점의 사고력 체스를 혼동하지 않는다. 이벤트 수량·등록 조건·진행 여부는 입력으로 확인된 것만 쓰며, 불확실하면 missing_info에 확인 사항을 적는다. 확인되지 않은 현재 진행 여부나 선물 증정을 단정하지 않는다.'
     else:
         mode_rules = '행사 안내는 대상·일시·장소·참가 방법 등 확인된 핵심 정보를 우선한다. 빠진 정보는 missing_info에 기록하고 만들어 넣지 않는다.'
+    mode_rules += ('\\n작성 전에 대상 지점의 교육과정과 글 유형을 점검한다. '
+                   '구래점은 사고력 체스·영어체스·중국어체스, 장기점은 사고력 체스·보드게임·그래비트랙스, '
+                   '사우점은 사고력 체스 중심으로 소개한다. '
+                   '모집·오픈 홍보에서 해당 지점의 실제 강점을 빠뜨리지 않는다. '
+                   '모든 연령층의 학습자들을, 세상을 바라보는 시야를 넓혀보세요, '
+                   '많은 분들이 기다리셨던, 단순한 게임이 아닌 등의 상투적인 표현을 피한다. '
+                   '구체적 사실이 없으면 대체 문장을 지어내지 않는다.')
     data = await asyncio.to_thread(call_model, SYSTEM + date_rules + '\\n[콘텐츠 유형별 우선 규칙]\\n' + mode_rules, context)
     data = validate_article(data, branch)
     # 실제 생성 시험에서 발견된 검색어 누락과 핀 설명 오류를 보정한다.
@@ -352,11 +359,17 @@ async def generate(branch: str = Form('사우점'), content_type: str = Form('�
     if compact(keyword) not in compact(data['titles'][idx]):
         data['titles'][idx] = keyword + ' | ' + data['titles'][idx]
     if compact(keyword) not in compact(data['body']):
-        if any(area in keyword for area in BRANCHES[branch]['nearby']):
-            intro = keyword + '을 알아보는 학부모님께 생각키움연구소 ' + branch + '의 수업 방식을 소개합니다.'
+        # Add a natural, purpose-aware lead instead of the generic '수업 이야기' line.
+        if content_type in ('수업후기', '대회후기'):
+            intro = f'{keyword}에서 진행한 생각키움연구소 {branch}의 실제 활동을 소개합니다.' if branch != '전체' else f'{keyword} 수업에서 다룬 내용을 소개합니다.'
+        elif content_type in ('오픈안내', '신규모집', '이벤트'):
+            intro = f'{keyword}을 찾고 계신 분께 생각키움연구소 {branch}의 교육과정을 안내합니다.' if branch != '전체' else f'{keyword} 교육과정을 안내합니다.'
         else:
-            intro = keyword + ' 생각키움연구소' + ('' if branch == '전체' else ' ' + branch) + '의 수업 이야기입니다.'
+            intro = f'{keyword} 관련 행사와 참여 정보를 안내합니다.'
         data['body'] = intro + '\n\n' + data['body']
+    if content_type in ('오픈안내', '신규모집', '이벤트'):
+        # Remove stale boilerplate that the model sometimes generates.
+        data['body'] = re.sub(r'^(?:구래동|장기동|사우동) 체스학원 생각키움연구소 (?:구래점|장기점|사우점)의 수업 이야기입니다\\.\\s*', '', data['body'])
     data['hashtags'] = build_hashtags(branch, content_type, target, keyword, lesson)
     checks = check_article(data, keyword, branch, profile, history)
     titles = '\n'.join(f'{i+1}. {t}' for i, t in enumerate(data['titles']))
