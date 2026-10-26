@@ -451,6 +451,9 @@ async def generate(branch: str = Form('사우점'), content_type: str = Form('�
             r'(?m)^\\s*(?:구래동|장기동|사우동)\\s*체스학원\\s*생각키움연구소\\s*(?:구래점|장기점|사우점)의\\s*수업\\s*이야기입니다[.!]?\\s*\\n*',
             '', data['body']
         ).strip()
+    if branch == '구래점' and content_type == '오픈안내':
+        if '영어' not in data['body'] or '중국어' not in data['body']:
+            data['body'] += '\\n\\n구래점에서는 사고력 체스와 함께 영어체스·중국어체스 수업도 운영합니다.'
     # Never publish an empty contact placeholder.
     for field in ('body', 'instagram'):
         data[field] = re.sub(r'문의는\\s*\\[(?:연락처|전화번호)\\][^\\n.!?]*[.!?]?', '', data[field]).strip()
