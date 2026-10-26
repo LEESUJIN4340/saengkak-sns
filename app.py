@@ -446,8 +446,11 @@ async def generate(branch: str = Form('사우점'), content_type: str = Form('�
             intro = f'{keyword} 관련 행사와 참여 정보를 안내합니다.'
         data['body'] = intro + '\n\n' + data['body']
     if content_type in ('오픈안내', '신규모집', '이벤트'):
-        # Remove stale boilerplate that the model sometimes generates.
-        data['body'] = re.sub(r'^(?:구래동|장기동|사우동) 체스학원 생각키움연구소 (?:구래점|장기점|사우점)의 수업 이야기입니다\\.\\s*', '', data['body'])
+        # Clean legacy first lines, including whitespace and punctuation variants.
+        data['body'] = re.sub(
+            r'(?m)^\\s*(?:구래동|장기동|사우동)\\s*체스학원\\s*생각키움연구소\\s*(?:구래점|장기점|사우점)의\\s*수업\\s*이야기입니다[.!]?\\s*\\n*',
+            '', data['body']
+        ).strip()
     # Never publish an empty contact placeholder.
     for field in ('body', 'instagram'):
         data[field] = re.sub(r'문의는\\s*\\[(?:연락처|전화번호)\\][^\\n.!?]*[.!?]?', '', data[field]).strip()
