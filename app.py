@@ -351,6 +351,15 @@ async def generate(branch: str = Form('사우점'), content_type: str = Form('�
                    '모든 연령층의 학습자들을, 세상을 바라보는 시야를 넓혀보세요, '
                    '많은 분들이 기다리셨던, 단순한 게임이 아닌 등의 상투적인 표현을 피한다. '
                    '구체적 사실이 없으면 대체 문장을 지어내지 않는다.')
+    level_by_branch = {
+        '사우점': '중급반·상급반·선수반까지 운영한다. 입문반이나 기본반 운영은 확인 없이 추가하지 않는다.',
+        '구래점': '입문반부터 중급반까지 운영한다. 상급반·선수반은 운영한다고 쓰지 않는다.',
+        '장기점': '입문반부터 기본반까지 운영한다. 중급반·상급반·선수반은 운영한다고 쓰지 않는다.',
+        '전체': '지점별 수준을 구분한다: 사우점 중급·상급·선수반, 구래점 입문~중급반, 장기점 입문~기본반.'
+    }
+    mode_rules += '\\n[지점별 실제 수업 수준] ' + level_by_branch[branch]
+    if content_type in ('오픈안내', '신규모집', '이벤트'):
+        mode_rules += ' 홍보글에서 대상 수준을 분명하게 소개하되 다른 지점의 반을 섞어 쓰지 않는다.'
     data = await asyncio.to_thread(call_model, SYSTEM + date_rules + '\\n[콘텐츠 유형별 우선 규칙]\\n' + mode_rules, context)
     data = validate_article(data, branch)
     # 실제 생성 시험에서 발견된 검색어 누락과 핀 설명 오류를 보정한다.
