@@ -168,14 +168,14 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
             'preserving its original composition and actual occupants.'
             if scene_mode == 'preserve' else
             'Create a clearly staged, fictional promotional illustration based on this REAL room. '
-            'Add exactly two fictional Korean elementary-age students at one existing desk, '
+            'Add up to two fictional elementary-age students only if the original photograph has clearly available seating at an existing desk, '
             'engaged with each other and the same chessboard. ' + activity_prompts[selected] + ' ' 
             'They should be visibly collaborating, discussing or actively playing, not merely posing. ' 
             'Avoid isolated, bored, upset or sulking expressions and disconnected activities. ' 
             'Children must share attention, eye-lines, and a believable conversational gesture. ' 
             'Do not pose with two fingers pointing to an unrelated paper. ' 
             'They should be thoughtfully '
-            'studying chessboards and reviewing moves. Keep the REAL room architecture unchanged. '
+            'studying chessboards and reviewing moves. Keep the REAL room architecture unchanged. ' 'Respect physical seating geometry: each student must sit on an existing chair with the chair back behind the torso, upper body above and behind the table edge, hips supported by the seat, and legs below the tabletop. Keep the original table edges, chair positions and perspective intact. Never let the desk intersect a body, and never add students to occupied chairs or places without sufficient space. If this cannot be achieved, keep the original people and furniture without adding anyone. '
             'Do not add any adults or instructors. Do not portray the scene as a documentary photograph.'
         )
         prompt=(scene_instruction + ' ' + piece_guidance + ' '
