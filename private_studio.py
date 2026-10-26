@@ -86,7 +86,7 @@ def logout():
 @router.post('/api/studio/upload')
 async def upload(request:Request,branch:str=Form(...),kind:str=Form(...),file:UploadFile=File(...)):
     guard(request)
-    if branch not in BRANCHES or kind not in ('interior','owner'): raise HTTPException(422,'지점 또는 사진 유형이 올바르지 않습니다.')
+    if branch not in BRANCHES or kind not in ('interior','owner','pieces'): raise HTTPException(422,'지점 또는 사진 유형이 올바르지 않습니다.')
     data=await file.read(MAX_BYTES+1)
     photo=validate_image(data)
     key=f'studio/original/{branch}/{kind}/{uuid.uuid4().hex}.jpg'
@@ -122,7 +122,7 @@ async def delete_file(request:Request,key:str):
     await asyncio.to_thread(lambda:store().delete_object(Bucket=bucket(),Key=safe_key(key)))
     return {'ok':True}
 @router.post('/api/studio/generate')
-async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),body:str=Form(...),reference_key:str=Form(...),owner_key:str=Form(''),scene_mode:str=Form('preserve'),activity:str=Form('auto'),request_id:str=Form('')):
+async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),body:str=Form(...),reference_key:str=Form(...),owner_key:str=Form(''),pieces_keys:str=Form(''),scene_mode:str=Form('preserve'),activity:str=Form('auto'),request_id:str=Form('')):
     guard(request)
     if branch not in BRANCHES or platform not in ('당근','블로그','인스타그램') or not 10<=len(body)<=3000:
         raise HTTPException(422,'지점·채널·본문을 확인해 주세요.')
@@ -131,6 +131,9 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
     prefix=f'studio/original/{branch}/'
     if not reference_key.startswith(prefix+'interior/'): raise HTTPException(422,'해당 지점의 실내 사진을 선택해 주세요.')
     if owner_key and not owner_key.startswith(prefix+'owner/'): raise HTTPException(422,'해당 지점의 원장 사진을 선택해 주세요.')
+    piece_keys=[k.strip() for k in pieces_keys.split(',') if k.strip()]
+    if len(piece_keys)>5 or len(set(piece_keys))!=len(piece_keys) or any(not k.startswith(prefix+'pieces/') or not k.endswith('.jpg') for k in piece_keys):
+        raise HTTPException(422,'체스 기물 참고사진은 같은 지점에서 최대 5장까지 선택해 주세요.')
     if not os.getenv('OPENAI_API_KEY'): raise HTTPException(503,'이미지 생성 API 키가 설정되지 않았습니다.')
     if not request_id or len(request_id)>100 or not all(ch.isalnum() or ch in '-_' for ch in request_id):
         raise HTTPException(422,'이미지 요청 식별자가 올바르지 않습니다. 페이지를 새로고침해 주세요.')
@@ -142,12 +145,20 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
     refs=[await asyncio.to_thread(get_bytes,reference_key)]
     if owner_key and scene_mode == 'students': raise HTTPException(422,'학생 연출 모드에서는 원장 사진을 사용하지 않습니다.')
     if owner_key: refs.append(await asyncio.to_thread(get_bytes,owner_key))
+    for piece_key in piece_keys: refs.append(await asyncio.to_thread(get_bytes,piece_key))
     def create():
         from openai import OpenAI
         client=OpenAI(api_key=os.environ['OPENAI_API_KEY'],timeout=180)
         images=[]
         for i,data in enumerate(refs):
             stream=io.BytesIO(data);stream.name=f'reference_{i}.jpg';images.append(stream)
+        # First image is the classroom; later piece images are reference-only.
+        piece_guidance = ('The last '+str(len(piece_keys))+' input photographs show the REAL chess set used at this academy. '
+            'Use them strictly as identity references for the physical pieces and board, not as backgrounds. '
+            'Match ivory and black plastic shapes, relative size, matte finish and the plum-and-cream board. '
+            'Do not paste a large close-up of pieces into the scene. '
+            'Prefer leaving existing photographed boards and pieces untouched. '
+            'Do not invent impossible positions or extra pieces. ') if piece_keys else ''
         # The classroom photo is the image to EDIT, not merely an inspiration.
         # Keep the original academy recognisable; never hallucinate a teacher.
         activity_prompts = {'discussion':'Two students face each other over one chessboard and discuss a move together.', 'review':'Two students sit together, one replays a chess move and the other checks the scoresheet.', 'decision':'Two students face each other and attentively play a chess game.', 'language':'Two students point to chess pieces together while practicing vocabulary.'}
@@ -167,7 +178,7 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
             'studying chessboards and reviewing moves. Keep the REAL room architecture unchanged. '
             'Do not add any adults or instructors. Do not portray the scene as a documentary photograph.'
         )
-        prompt=(scene_instruction + ' '
+        prompt=(scene_instruction + ' ' + piece_guidance + ' '
             'Edit the FIRST provided photograph. It is the actual interior of a Korean chess academy, '
             'and must remain the recognisable main subject of the finished promotional image. '
             'This is PHOTO EDITING, NOT a new imagined classroom or a stock photograph. '
