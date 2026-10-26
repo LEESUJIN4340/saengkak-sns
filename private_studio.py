@@ -205,7 +205,7 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
             f'Academy branch: {branch}. Publication channel: {platform}. '
             f'Post theme for atmosphere only (do not invent objects or people): {body[:1200]}.'
         )
-        result=client.images.edit(model=os.getenv('OPENAI_IMAGE_MODEL','gpt-image-1'),image=images,
+        result=client.images.edit(model=os.getenv('OPENAI_IMAGE_MODEL','gpt-image-1.5'),image=images,
                                   prompt=prompt,size='1024x1024',input_fidelity='high',quality='high')
         import base64
         return base64.b64decode(result.data[0].b64_json)
