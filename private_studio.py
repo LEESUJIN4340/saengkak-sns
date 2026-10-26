@@ -115,6 +115,24 @@ async def private_file(request:Request,key:str):
     try: data=await asyncio.to_thread(get_bytes,key)
     except Exception: raise HTTPException(404,'파일을 찾지 못했습니다.')
     return no_cache(StreamingResponse(io.BytesIO(data),media_type='image/png' if key.endswith('.png') else 'image/jpeg'))
+@router.get('/api/studio/thumbnail')
+async def private_thumbnail(request:Request,key:str):
+    guard(request)
+    if not (key.startswith('studio/original/') or key.startswith('studio/generated/')):
+        raise HTTPException(403,'접근할 수 없는 파일입니다.')
+    try:
+        data=await asyncio.to_thread(get_bytes,key)
+        def make_preview():
+            with Image.open(io.BytesIO(data)) as source:
+                source.thumbnail((480,360))
+                output=io.BytesIO()
+                source.convert('RGB').save(output,format='JPEG',quality=75,optimize=True)
+                return output.getvalue()
+        preview=await asyncio.to_thread(make_preview)
+    except Exception:
+        raise HTTPException(404,'사진 미리보기를 만들지 못했습니다.')
+    return no_cache(Response(content=preview,media_type='image/jpeg'))
+
 @router.delete('/api/studio/file')
 async def delete_file(request:Request,key:str):
     guard(request)
