@@ -462,14 +462,13 @@ async def generate(branch: str = Form('사우점'), content_type: str = Form('�
     if compact(keyword) not in compact(data['titles'][idx]):
         data['titles'][idx] = keyword + ' | ' + data['titles'][idx]
     if compact(keyword) not in compact(data['body']):
-        # Add a natural, purpose-aware lead instead of the generic '수업 이야기' line.
-        if content_type in ('수업후기', '대회후기'):
-            intro = f'{keyword}에서 진행한 생각키움연구소 {branch}의 실제 활동을 소개합니다.' if branch != '전체' else f'{keyword} 수업에서 다룬 내용을 소개합니다.'
-        elif content_type in ('오픈안내', '신규모집', '이벤트'):
-            intro = f'{keyword}을 찾고 계신 분께 생각키움연구소 {branch}의 교육과정을 안내합니다.' if branch != '전체' else f'{keyword} 교육과정을 안내합니다.'
+        # Preserve a natural opening: insert the keyword into an existing lead.
+        paragraphs = data['body'].split('\\n', 1)
+        first = paragraphs[0].strip()
+        if first and len(first) < 180:
+            data['body'] = first + ' (' + keyword + ')' + ('\\n' + paragraphs[1] if len(paragraphs) > 1 else '')
         else:
-            intro = f'{keyword} 관련 행사와 참여 정보를 안내합니다.'
-        data['body'] = intro + '\n\n' + data['body']
+            data['missing_info'] = list(dict.fromkeys(data.get('missing_info', []) + ['핵심 검색어의 자연스러운 본문 배치 확인 필요']))
     if content_type in ('오픈안내', '신규모집', '이벤트'):
         # Clean legacy first lines, including whitespace and punctuation variants.
         data['body'] = re.sub(
