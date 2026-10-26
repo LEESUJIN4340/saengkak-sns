@@ -462,13 +462,8 @@ async def generate(branch: str = Form('사우점'), content_type: str = Form('�
     if compact(keyword) not in compact(data['titles'][idx]):
         data['titles'][idx] = keyword + ' | ' + data['titles'][idx]
     if compact(keyword) not in compact(data['body']):
-        # Preserve a natural opening: insert the keyword into an existing lead.
-        paragraphs = data['body'].split('\\n', 1)
-        first = paragraphs[0].strip()
-        if first and len(first) < 180:
-            data['body'] = first + ' (' + keyword + ')' + ('\\n' + paragraphs[1] if len(paragraphs) > 1 else '')
-        else:
-            data['missing_info'] = list(dict.fromkeys(data.get('missing_info', []) + ['핵심 검색어의 자연스러운 본문 배치 확인 필요']))
+        # Do not append an artificial SEO lead to a completed article.
+        data['missing_info'] = list(dict.fromkeys(data.get('missing_info', []) + ['핵심 검색어를 본문에 자연스럽게 반영했는지 확인 필요']))
     if content_type in ('오픈안내', '신규모집', '이벤트'):
         # Clean legacy first lines, including whitespace and punctuation variants.
         data['body'] = re.sub(
