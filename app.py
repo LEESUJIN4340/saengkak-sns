@@ -313,27 +313,25 @@ JSON 객체만 출력: {"title":"...","body":"...","missing_info":["..."]}.
         raise HTTPException(502, '당근 원고가 불완전합니다. 다시 생성해 주세요.')
     return {'title': title[:160], 'body': body[:3000], 'missing_info': data.get('missing_info', [])}
 
-def mandatory_promo_checks(data, branch, content_type):
-    """Deterministic checks: instructions alone do not guarantee required details."""
-    if content_type not in ('오픈안내', '신규모집', '이벤트'):
-        return []
+def mandatory_promo_checks(data, branch, content_type, lesson=''):
+    """Check relevant information only, without forcing every credential into every post."""
     body = data.get('body', '')
-    compact = re.sub(r'\\s+', '', body).lower()
-    required = {
-        '구래점': [('입문~중급 수준', ('입문', '중급')), ('영어·중국어 체스', ('영어', '중국어'))],
-        '사우점': [('중급·상급·선수반', ('중급', '상급', '선수반')), ('이영규 선수 및 FIDE CM', ('이영규', 'cm'))],
-        '장기점': [('입문·기본반', ('입문', '기본')), ('보드게임·그래비트랙스', ('보드게임', '그래비트랙스'))],
-    }
-    checks = required.get(branch, [])
-    checks += [('FIDE 공인 강사진', ('fide', '트레이너')),
-               ('대한체스연맹 심판 자격', ('대한체스연맹', '심판')),
-               ('유아교육 전문성', ('유아교육',)),
-               ('이수진 원장 학교체스지도자', ('이수진', '학교체스지도자'))]
-    missing = [name for name, terms in checks if not all(t in compact for t in terms)]
+    compact = re.sub(r'\s+', '', body).lower()
+    topic = re.sub(r'\s+', '', lesson).lower()
+    missing = []
+    if content_type in ('오픈안내', '신규모집'):
+        levels = {'구래점': ('입문', '중급'),
+                  '사우점': ('중급', '상급', '선수반'),
+                  '장기점': ('입문', '기본')}
+        if branch in levels and not all(word in compact for word in levels[branch]):
+            missing.append('지점별 수업 수준')
+        if branch == '구래점' and any(word in topic for word in ('영어체스', '중국어체스', '외국어체스')):
+            if not all(word in compact for word in ('영어', '중국어')):
+                missing.append('외국어 체스 과정')
     if '[연락처]' in body or '[전화번호]' in body:
-        missing.append('미완성 연락처 자리표시자')
-    if '수업이야기입니다' in compact and content_type == '오픈안내':
-        missing.append('오픈 안내에 잘못된 수업후기 도입')
+        missing.append('연락처 자리표시자')
+    if content_type == '오픈안내' and '수업이야기입니다' in compact:
+        missing.append('오픈 안내의 잘못된 도입')
     return missing
 
 
@@ -415,7 +413,7 @@ async def generate(branch: str = Form('사우점'), content_type: str = Form('�
 
     data = await asyncio.to_thread(call_model, SYSTEM + date_rules + '\\n[콘텐츠 유형별 우선 규칙]\\n' + mode_rules, context)
     data = validate_article(data, branch)
-    missing = mandatory_promo_checks(data, branch, content_type)
+    missing = mandatory_promo_checks(data, branch, content_type, lesson)
     if missing:
         repair_rules = (
             '기존 원고를 교정하여 동일한 JSON 구조로 다시 출력하라. '
@@ -431,7 +429,7 @@ async def generate(branch: str = Form('사우점'), content_type: str = Form('�
             {**context, 'draft_to_revise': data, 'required_fixes': missing}
         )
         revision = validate_article(revision, branch)
-        if len(mandatory_promo_checks(revision, branch, content_type)) < len(missing):
+        if len(mandatory_promo_checks(revision, branch, content_type, lesson)) < len(missing):
             data = revision
     # 실제 생성 시험에서 발견된 검색어 누락과 핀 설명 오류를 보정한다.
     idx = data['recommended_index']
@@ -453,7 +451,7 @@ async def generate(branch: str = Form('사우점'), content_type: str = Form('�
     # Never publish an empty contact placeholder.
     for field in ('body', 'instagram'):
         data[field] = re.sub(r'문의는\\s*\\[(?:연락처|전화번호)\\][^\\n.!?]*[.!?]?', '', data[field]).strip()
-    outstanding = mandatory_promo_checks(data, branch, content_type)
+    outstanding = mandatory_promo_checks(data, branch, content_type, lesson)
     if outstanding:
         data['missing_info'] = list(dict.fromkeys(data.get('missing_info', []) + ['자동 검수 미통과: ' + ', '.join(outstanding)]))
     data['hashtags'] = build_hashtags(branch, content_type, target, keyword, lesson)
