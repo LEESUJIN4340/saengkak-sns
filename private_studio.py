@@ -110,6 +110,16 @@ async def shared_pieces(request:Request):
             items.extend({'key':item['Key'],'branch':branch,'size':item['Size']} for page in pages for item in page.get('Contents',[]))
         return items[:150]
     return {'items':await asyncio.to_thread(load)}
+@router.get('/api/studio/shared-owner')
+async def shared_owner(request:Request):
+    guard(request)
+    def load():
+        items=[]
+        for branch in sorted(BRANCHES):
+            pages=store().get_paginator('list_objects_v2').paginate(Bucket=bucket(),Prefix=f'studio/original/{branch}/owner/')
+            items.extend({'key':item['Key'],'branch':branch} for page in pages for item in page.get('Contents',[]))
+        return items[:100]
+    return {'items':await asyncio.to_thread(load)}
 @router.get('/api/studio/generated')
 async def generated_list(request:Request,branch:str):
     guard(request)
@@ -158,7 +168,7 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
     if activity not in ('auto','discussion','review','decision','language'): raise HTTPException(422,'수업 장면을 선택해 주세요.')
     prefix=f'studio/original/{branch}/'
     if not reference_key.startswith(prefix+'interior/'): raise HTTPException(422,'해당 지점의 실내 사진을 선택해 주세요.')
-    if owner_key and not owner_key.startswith(prefix+'owner/'): raise HTTPException(422,'해당 지점의 원장 사진을 선택해 주세요.')
+    if owner_key and not any(owner_key.startswith(f'studio/original/{b}/owner/') for b in BRANCHES): raise HTTPException(422,'해당 지점의 원장 사진을 선택해 주세요.')
     piece_keys=[k.strip() for k in pieces_keys.split(',') if k.strip()]
     if len(piece_keys)>5 or len(set(piece_keys))!=len(piece_keys) or any(not any(k.startswith(f'studio/original/{b}/pieces/') for b in BRANCHES) or not k.endswith('.jpg') for k in piece_keys):
         raise HTTPException(422,'체스 기물 참고사진은 전체 지점에서 최대 5장까지 선택해 주세요.')
@@ -171,7 +181,6 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
     if request_id in _RECENT_REQUESTS: raise HTTPException(409,'이미 요청한 이미지입니다. 완성 이미지 목록을 확인해 주세요.')
     if _GENERATION_LOCK.locked(): raise HTTPException(429,'이미지 제작이 진행 중입니다. 중복 요청하지 마세요.')
     refs=[await asyncio.to_thread(get_bytes,reference_key)]
-    if owner_key and scene_mode == 'students': raise HTTPException(422,'학생 연출 모드에서는 원장 사진을 사용하지 않습니다.')
     if owner_key: refs.append(await asyncio.to_thread(get_bytes,owner_key))
     for piece_key in piece_keys: refs.append(await asyncio.to_thread(get_bytes,piece_key))
     def create():
@@ -191,6 +200,7 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
         # Keep the original academy recognisable; never hallucinate a teacher.
         activity_prompts = {'discussion':'Two students face each other over one chessboard and discuss a move together.', 'review':'Two students sit together, one replays a chess move and the other checks the scoresheet.', 'decision':'Two students face each other and attentively play a chess game.', 'language':'Two students point to chess pieces together while practicing vocabulary.'}
         selected = activity if activity != 'auto' else ('review' if '복기' in body else 'language' if '영어' in body or '중국어' in body else 'discussion' if '토론' in body or '의견' in body else 'decision')
+        owner_guidance = ('The second input image is the academy owner identity reference. Include this same adult as a single teacher naturally guiding students near the central chess activity, without obscuring students or chessboards. Preserve their facial identity faithfully; do not duplicate the teacher. Ensure physically plausible standing or seated posture, shadows, hands and furniture occlusion. ' if owner_key and scene_mode == 'students' else 'If an owner reference is supplied, preserve the owner facial identity only where the person already appears in the original classroom. ' if owner_key else '')
         scene_instruction = (
             'Do not add any new people. Retouch the real classroom photograph only, '
             'preserving its original composition and actual occupants.'
@@ -206,7 +216,7 @@ async def generate(request:Request,branch:str=Form(...),platform:str=Form(...),b
             'studying chessboards and reviewing moves. Keep the REAL room architecture unchanged. ' 'Respect physical seating geometry: each student must sit on an existing chair with the chair back behind the torso, upper body above and behind the table edge, hips supported by the seat, and legs below the tabletop. Keep the original table edges, chair positions and perspective intact. Never let the desk intersect a body, and never add students to occupied chairs or places without sufficient space. If this cannot be achieved, keep the original people and furniture without adding anyone. '
             'Choose varied, age-appropriate Korean students based on the actual academy post: kindergarten-age, younger elementary, older elementary, or teenagers. Use a coherent age group for one scene, not a random mixture. Expressions should vary naturally between quiet concentration, friendly smiles, and shared enjoyment. Students may smile at each other while discussing a move; avoid identical expressions or staged grins. ' 'Keep every original desk exactly the same width, depth, height, tabletop thickness, edge shape, and leg positions. Perspective scaling must follow camera distance only; do not widen foreground desks or narrow background desks. Maintain consistent chair proportions and natural distances between furniture. ' 'Preserve the existing glass windows, transparency, interior light reflections, and original scene reflections. For newly added people, render only physically plausible subtle reflections where glass angle, visibility, and lighting justify them; absence of a visible reflection can be correct when geometry does not support one. Never fabricate silhouettes in the glass or erase real reflections. ' 'Verify believable arm lengths, elbows, wrists, five fingers per hand, leg positions, seat contact, natural eye-lines and shadows. Keep hands connected to arms and chess pieces on the actual board squares. Keep the chessboard square, flat on the tabletop, and aligned with the table perspective. ' 'Prefer minimal local edits over reconstructing the entire photograph. When a requested action conflicts with the original furniture geometry, preserve the original photo rather than forcing a scene. ' 'Do not add any adults or instructors. Do not portray the scene as a documentary photograph.'
         )
-        prompt=(scene_instruction + ' ' + piece_guidance + ' '
+        prompt=(scene_instruction + ' ' + owner_guidance + ' ' + piece_guidance + ' '
             'Edit the FIRST provided photograph. It is the actual interior of a Korean chess academy, '
             'and must remain the recognisable main subject of the finished promotional image. '
             'This is PHOTO EDITING, NOT a new imagined classroom or a stock photograph. '
