@@ -337,7 +337,14 @@ async def generate(branch: str = Form('사우점'), content_type: str = Form('�
     context['chess_terms'] = get_chess_term_explanation(lesson)
     context['gurai_status'] = '구래점은 2026년 10월 18일 개원 완료' if now >= datetime(2026, 10, 18, tzinfo=KST) else '구래점은 2026년 10월 18일 개원 예정'
     date_rules = '\n현재 날짜·계절은 date_kst, school_season을 따른다. 학기 중인 시기에 새 학기가 지금 시작된다고 쓰지 않는다. 실제 학교의 방학일은 추측하지 않는다. 소재에 명시된 미래 행사·과거 회고와 현재를 구분한다. 구래점 개원 상태는 gurai_status에 따른다. chess_terms의 정확한 개념을 우선한다. 유아는 놀이·규칙, 초등은 후보 수 비교·실수 복기, 청소년은 분석과 계획, 성인은 취미와 대국 과정에 맞춘다. 수능·입시·성적 향상과 직접 연결된다고 단정하지 않는다.'
-    data = await asyncio.to_thread(call_model, SYSTEM + date_rules, context)
+    mode_rules = ''
+    if content_type in ('수업후기', '대회후기'):
+        mode_rules = '실제 수업·대회 기록을 중심으로 배운 내용, 사고 과정, 복기를 설명한다. 기록되지 않은 대화나 성과를 만들지 않는다. 홍보 혜택을 임의로 넣지 않는다.'
+    elif content_type in ('신규모집', '이벤트', '오픈안내'):
+        mode_rules = '오픈·모집·이벤트 홍보글은 첫 단락에서 지점과 혜택을 명확히 안내하고, 대상·수업 특징·참여 조건·위치·상담 정보를 확인된 범위에서 제시한다. 일반적인 체스 효과 설명이나 전술 이야기를 길게 쓰지 않는다. 구래점의 사고력 체스·영어체스·중국어체스, 장기점의 사고력 체스·보드게임·그래비트랙스, 사우점의 사고력 체스를 혼동하지 않는다. 이벤트 수량·등록 조건·진행 여부는 입력으로 확인된 것만 쓰며, 불확실하면 missing_info에 확인 사항을 적는다. 확인되지 않은 현재 진행 여부나 선물 증정을 단정하지 않는다.'
+    else:
+        mode_rules = '행사 안내는 대상·일시·장소·참가 방법 등 확인된 핵심 정보를 우선한다. 빠진 정보는 missing_info에 기록하고 만들어 넣지 않는다.'
+    data = await asyncio.to_thread(call_model, SYSTEM + date_rules + '\\n[콘텐츠 유형별 우선 규칙]\\n' + mode_rules, context)
     data = validate_article(data, branch)
     # 실제 생성 시험에서 발견된 검색어 누락과 핀 설명 오류를 보정한다.
     idx = data['recommended_index']
