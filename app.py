@@ -579,30 +579,118 @@ async def daangn_draft(
 ):
     if branch not in ("구래점", "사우점", "장기점"):
         raise HTTPException(400, "지점을 확인해 주세요.")
-    prompt = (
-        f"지점: {branch}\\n유형: {post_type}\\n주제: {topic}\\n"
-        f"사용자가 확인한 실제 사실: {facts or '(추가 정보 없음)'}\\n"
-        "당근 비즈프로필용 한국어 소식 원고를 작성하세요. "
-        "제목은 30자 이내, 본문은 200~450자. 친근하지만 신뢰감 있게 쓰세요. "
-        "학생 발언, 학부모 상담, 수업 장면, 할인, 일정, 체험수업을 지어내지 마세요. "
-        "실제 사실이 없으면 일반적인 교육 소개만 작성하세요. "
-        "오직 JSON 객체로 답하세요: "
-        '{"title":"제목","body":"본문","missing_info":[]}'
+
+    # ── 지점별 필수 정보 ──────────────────────────────
+    daangn_branch_info = {
+        "사우점": (
+            "• 운영 과정: 중급반 · 상급반 · 선수반\n"
+            "• 대표 성과: 국가대표이자 FIDE CM 이영규 선수를 배출한 곳 (이 글에서 자연스러울 때 1회 활용 가능)\n"
+            "• 구래점·장기점에서 실력을 쌓은 학생이 이어서 올 수 있는 상급 과정 존재\n"
+            "• 모든 강사: FIDE 공인 트레이너 + 대한체스연맹 심판 자격 + 유아교육 전문가\n"
+            "• 이수진 원장: FIDE 공인 학교체스지도자 자격 보유"
+        ),
+        "구래점": (
+            "• 운영 과정: 입문반 · 기초반 · 중급반\n"
+            "• 2026년 10월 18일 신규 개원, 구래역 인근\n"
+            "• 영어체스 · 중국어체스 수업 병행 운영\n"
+            "• 기초를 다진 후 사우점 중급·선수반으로 이어지는 성장 경로 존재 (자연스러울 때만)\n"
+            "• 이영규 선수 언급 금지 (사우점 전용 성과)\n"
+            "• 모든 강사: FIDE 공인 트레이너 + 대한체스연맹 심판 자격 + 유아교육 전문가\n"
+            "• 이수진 원장: FIDE 공인 학교체스지도자 자격 보유"
+        ),
+        "장기점": (
+            "• 운영 과정: 입문반 · 기본반\n"
+            "• 체스를 처음 접하는 유아·초등 저학년에게 최적화\n"
+            "• 기본기를 쌓은 후 구래점·사우점으로 이어지는 성장 경로 존재 (자연스러울 때만)\n"
+            "• 이영규 선수 언급 금지 (사우점 전용 성과)\n"
+            "• 모든 강사: FIDE 공인 트레이너 + 대한체스연맹 심판 자격 + 유아교육 전문가\n"
+            "• 이수진 원장: FIDE 공인 학교체스지도자 자격 보유"
+        ),
+    }
+    branch_info_text = daangn_branch_info.get(branch, "")
+
+    # ── facts가 짧으면 지점 기본 소개로 보완 ─────────
+    daangn_default_facts = {
+        "구래점": "구래점 신규 개원, FIDE 공인 트레이너 강사진, 입문~중급반 운영, 영어·중국어체스 병행",
+        "사우점": "사고력체스 수업, FIDE 공인 트레이너 지도, 중급~선수반 운영, 스스로 생각하는 힘 키우기",
+        "장기점": "체스 첫걸음, FIDE 공인 트레이너 강사진, 입문~기본반 운영, 유아·초등 사고력 체스",
+    }
+    effective_facts = facts.strip() if facts and len(facts.strip()) >= 15 else ""
+    if not effective_facts:
+        for key, default in daangn_default_facts.items():
+            if key in branch:
+                effective_facts = default
+                break
+
+    # ── 날짜·학사 시기 ────────────────────────────────
+    now_kst = get_kst_now()
+    season = get_school_season(now_kst)
+    date_str = now_kst.strftime("%Y년 %m월 %d일")
+
+    system_prompt = (
+        "당신은 김포 생각키움연구소 사고력체스학원의 원장 또는 선생님이 직접 쓰는 당근 비즈프로필 소식 전문 편집자입니다.\n"
+        "반드시 JSON만 출력합니다: {\"title\":\"제목\",\"body\":\"본문\",\"missing_info\":[]}\n\n"
+        "[핵심 원칙]\n"
+        "• 글쓴이는 학원 선생님 본인입니다. '저는', '제가', '오늘 수업에서'처럼 1인칭으로 씁니다.\n"
+        "• '선생님은 ~했습니다' 같은 3인칭 관찰자 시점은 절대 사용하지 않습니다.\n"
+        "• 당근은 동네 이웃에게 말 걸듯 친근하고 따뜻하게 씁니다. 과장된 광고 문체 금지.\n"
+        "• 확인되지 않은 수상·할인·일정·체험수업을 지어내지 않습니다.\n\n"
+        "[체스 용어]\n"
+        "• '기물'만 사용 (말·돌·블록·체스조각 금지)\n"
+        "• 기물 이름: 킹·퀸·룩·비숍·나이트·폰\n\n"
+        "[강사 전문성 언급 방식]\n"
+        "• 자격증 이름을 직접 나열하지 않고, 수업 장면 속 행동으로 보여줍니다.\n"
+        "• 수업 장면은 '기다림'과 '적절한 안내'를 함께 담으세요.\n"
+        "  아이가 막혀있을 때 바로 답을 주지 않고 잠깐 기다린 뒤,\n"
+        "  아이가 눈을 들어 저를 바라보는 순간 힌트 하나로 스스로 연결하게 이끄는 방식입니다.\n"
+        "  예) '아이가 한참 체스판을 들여다봤어요. 저는 기다렸다가, 눈이 마주치는 순간\n"
+        "       조용히 한 칸을 가리켰습니다. \"여기 룩이 보이지?\" 그 한마디면 충분했어요.'\n"
+        "• 학원 소개·오픈 글에서는 마지막에 짧게 1회만 자연스럽게 덧붙입니다.\n\n"
+        "[문장 흐름]\n"
+        "• 짧은 문장과 긴 문장을 교차해 리듬을 만드세요.\n"
+        "• '~합니다. ~합니다. ~합니다.' 연속 반복 금지.\n"
+        "• 단락 사이 연결어('그러다', '그날', '덕분에')로 흐름을 이어주세요.\n"
     )
+
+    user_prompt = (
+        f"오늘 날짜: {date_str} ({season['label']})\n"
+        f"지점: {branch}\n"
+        f"글 유형: {post_type}\n"
+        f"주제/메모: {topic}\n"
+        f"추가 사실: {effective_facts}\n\n"
+        f"[{branch} 필수 반영 정보]\n"
+        f"{branch_info_text}\n\n"
+        "위 정보를 바탕으로 당근 비즈프로필용 소식을 작성하세요.\n"
+        "제목: 30자 이내, 동네 이웃에게 말 걸듯 친근하게.\n"
+        "본문: 200~450자. 1인칭으로, 수업 현장 장면 하나를 중심으로 풀어쓰세요.\n"
+        "JSON만 출력: {\"title\":\"제목\",\"body\":\"본문\",\"missing_info\":[]}"
+    )
+
     try:
         c = get_client()
         r = c.chat.completions.create(
             model="gpt-4o",
-            messages=[{"role":"system","content":"사실에 근거한 한국어 학원 소식 전문 편집자입니다. JSON만 출력합니다."},
-                      {"role":"user","content":prompt}],
-            response_format={"type":"json_object"},
-            max_tokens=900,
-            temperature=0.5
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=1000,
+            temperature=0.6
         )
         data = json.loads(r.choices[0].message.content or "{}")
-        return {"title": str(data.get("title", "")),
-                "body": str(data.get("body", "")),
-                "missing_info": data.get("missing_info", [])}
+
+        body_text = str(data.get("body", ""))
+
+        # 새 학기 표현 오류 보정
+        if not season["allow_new_semester"] and has_new_semester_phrase(body_text):
+            body_text = fix_new_semester_phrase(body_text, season["label"])
+
+        return {
+            "title": str(data.get("title", "")),
+            "body": body_text,
+            "missing_info": data.get("missing_info", [])
+        }
     except HTTPException:
         raise
     except Exception:
