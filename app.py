@@ -753,6 +753,8 @@ async def generate(
     keyword: str = Form(""),
     branch_profile: str = Form("{}")
 ):
+    if branch not in ("사우점", "장기점", "구래점"):
+        raise HTTPException(400, "실제 운영 지점을 선택해 주세요.")
     kws = pick_keywords(branch, lesson, content_type)
     hashtags = build_hashtags(branch, content_type, target)
     normalized_type = {"원생모집": "신규모집", "원생 모집": "신규모집", "신규 모집": "신규모집"}.get(content_type, content_type)
@@ -1022,7 +1024,7 @@ async def generate(
 - 지역 검색어는 제목과 내용에 자연스럽게 사용한다. 김포체스학원, 사우동체스학원, 장기동체스학원, 구래동체스학원, 운양동체스학원, 김포사고력학원 등은 해당 지역·실제 지점과 주제가 맞을 때만 선택한다.
 - 글마다 핵심 지역 검색어와 브랜드 '생각키움연구소'를 명확히 드러내되 검색어 나열이나 동일 문구 반복을 피한다.
 """
-    prompt = f"""
+    prompt = f"""\n[절대 우선: 선택 지점 고정]\n이 글에서 소개할 유일한 학원 지점은 생각키움연구소 {branch}입니다. 다른 지점의 수업, 모집, 위치, 운영 과정, 강사 정보로 바꾸지 마세요. 다른 지점은 검색 키워드나 소재에 있더라도 소개 대상이 아닙니다.\n
 {curriculum_rule}
 {seo_education_rule}
 {variation_rule}
@@ -1229,6 +1231,11 @@ async def generate(
     compare_posts = recent_history
     def evaluate(candidate):
         problems = post_issues(candidate, lesson)
+        body = post_body(candidate)
+        other_branches = [b for b in ("사우점", "장기점", "구래점") if b != branch]
+        if branch not in body or any(re.search(r"(?:생각키움연구소\\s*)?" + re.escape(b) + r"(?:의|에서는|에서|은|는|을|를| 수업| 모집| 체험|에)", body) for b in other_branches):
+            problems.append("선택 지점 불일치: 반드시 " + branch + "만 홍보")
+
         similarity = max((post_similarity(candidate, p["text"]) for p in compare_posts), default=0.0)
         return problems, similarity
     issues, similarity = evaluate(result_text)
@@ -1238,7 +1245,7 @@ async def generate(
         retry_prompt = (
             f"이전 원고가 품질 검사에 걸렸습니다. 문제: {', '.join(issues) or '이전 글과 유사함'}. "
             f"기존 글과 유사도 {similarity:.0%}. "
-            f"이번 구도는 {angle_name}, 소제목 방향은 {angle_sections[angle_name]}입니다. "
+            f"이번 구도는 {angle_name}, 소제목 방향은 {angle_sections[angle_name]}입니다. "\n            f"가장 중요한 조건: 선택 지점은 생각키움연구소 {branch}이며 다른 지점을 절대로 소개하지 마세요. "
             "첫 문장, 소제목, 설명 사례, 글의 흐름을 완전히 새로 구성하세요. "
             "실제 입력에 없는 대화·후기·수업 경험·상담 방법은 창작하지 마세요. "
             "검색 키워드는 지역과 실제 지점을 구별하여 자연스럽게 사용하고, 생각키움연구소를 명시하세요. "
@@ -1260,6 +1267,9 @@ async def generate(
                 result_text, issues, similarity = candidate, new_issues, new_similarity
         except Exception:
             break
+    # 지점이 틀린 홍보글을 정상 결과로 내보내지 않는다.
+    if any("선택 지점 불일치" in item for item in issues):
+        raise HTTPException(422, f"선택하신 {branch}과 생성된 글의 지점이 달라 안전하게 중단했습니다. 다시 생성해 주세요.")
     with POST_HISTORY_LOCK:
         history = POST_HISTORY.setdefault(history_key, deque(maxlen=12))
         history.append({"text": result_text, "angle": angle_name,
