@@ -1291,8 +1291,6 @@ async def generate(
             for line in lines:
                 other = any(b != branch and re.search(re.escape(b) + r"(?:의|에서는|에서|은|는|을|를| 수업| 모집| 체험|에)", line)
                             for b in ("사우점", "장기점", "구래점"))
-                wrong = any(re.search(re.escape(area) + r"\\s*(?:에\\s*위치한|에\\s*있는|에\\s*자리한|에\\s*소재한)\\s*(?:생각키움연구소\\s*)?" + re.escape(branch), line)
-                            for area in wrong_location.get(branch, [])) if False else False
                 # 잘못된 위치 문구는 삭제하는 대신 '지역 학부모 대상'으로 명확히 수정한다.
                 for area in {"사우점": ("풍무동", "운양동", "구래동", "장기동"),
                              "장기점": ("풍무동", "운양동", "구래동", "사우동"),
@@ -1301,9 +1299,9 @@ async def generate(
                                   area + " 학부모를 위한 생각키움연구소 " + branch, line)
                 if not other:
                     safe_lines.append(line)
-            blog = "\\n".join(safe_lines)
+            blog = "\n".join(safe_lines)
             if branch not in blog:
-                blog = "생각키움연구소 " + branch + "의 사고력 체스 수업을 소개합니다.\\n\\n" + blog
+                blog = "생각키움연구소 " + branch + "의 사고력 체스 수업을 소개합니다.\n\n" + blog
             result_text = prefix + "===블로그본문===" + blog + (
                 "===인스타그램===" + parts[1] if len(parts) > 1 else ""
             )
