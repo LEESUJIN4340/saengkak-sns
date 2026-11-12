@@ -279,7 +279,7 @@ def post_similarity(a, b):
     if not aa or not bb:
         return 0.0
     # 긴 본문 전체보다 반복되는 소제목·도입부를 더 중요하게 비교
-    heading = lambda t: " ".join(re.findall(r"(?:🔹|\\[)[^\\n]{3,65}", post_body(t)))
+    heading = lambda t: " ".join(re.findall(r"(?:🔹|\[)[^\n]{3,65}", post_body(t)))
     whole = SequenceMatcher(None, aa[:2300], bb[:2300]).ratio()
     head = SequenceMatcher(None, heading(a), heading(b)).ratio() if heading(a) and heading(b) else 0
     return round(max(whole, head * 0.85), 3)
