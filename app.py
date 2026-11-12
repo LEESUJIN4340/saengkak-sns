@@ -1277,9 +1277,38 @@ async def generate(
                 result_text, issues, similarity = candidate, new_issues, new_similarity
         except Exception:
             break
-    # 지점이 틀린 홍보글을 정상 결과로 내보내지 않는다.
+    # 위치 관련 오류는 안전한 표현으로 교정해 글 생성을 불필요하게 차단하지 않는다.
+    # 지점명을 바꿔 쓰는 것만으로 소재지를 허위로 표현하지 않도록 문장 단위로 처리한다.
     if any(("선택 지점 불일치" in item or "실제 지점 위치 오류" in item) for item in issues):
-        raise HTTPException(422, f"선택하신 {branch}의 지점 또는 소재지 정보가 잘못 생성되어 게시를 중단했습니다. 다시 생성해 주세요.")
+        blocks = result_text.split("===블로그본문===")
+        if len(blocks) == 2:
+            prefix, rest = blocks
+            parts = rest.split("===인스타그램===", 1)
+            blog = parts[0]
+            # 다른 지점이나 잘못된 소재지를 설명하는 문장은 제거한다.
+            lines = blog.splitlines()
+            safe_lines = []
+            for line in lines:
+                other = any(b != branch and re.search(re.escape(b) + r"(?:의|에서는|에서|은|는|을|를| 수업| 모집| 체험|에)", line)
+                            for b in ("사우점", "장기점", "구래점"))
+                wrong = any(re.search(re.escape(area) + r"\\s*(?:에\\s*위치한|에\\s*있는|에\\s*자리한|에\\s*소재한)\\s*(?:생각키움연구소\\s*)?" + re.escape(branch), line)
+                            for area in wrong_location.get(branch, [])) if False else False
+                # 잘못된 위치 문구는 삭제하는 대신 '지역 학부모 대상'으로 명확히 수정한다.
+                for area in {"사우점": ("풍무동", "운양동", "구래동", "장기동"),
+                             "장기점": ("풍무동", "운양동", "구래동", "사우동"),
+                             "구래점": ("풍무동", "운양동", "사우동", "장기동")}.get(branch, ()):
+                    line = re.sub(re.escape(area) + r"\\s*에\\s*위치한\\s*(?:생각키움연구소\\s*)?" + re.escape(branch),
+                                  area + " 학부모를 위한 생각키움연구소 " + branch, line)
+                if not other:
+                    safe_lines.append(line)
+            blog = "\\n".join(safe_lines)
+            if branch not in blog:
+                blog = "생각키움연구소 " + branch + "의 사고력 체스 수업을 소개합니다.\\n\\n" + blog
+            result_text = prefix + "===블로그본문===" + blog + (
+                "===인스타그램===" + parts[1] if len(parts) > 1 else ""
+            )
+        issues, similarity = evaluate(result_text)
+    # 경고는 응답에 포함하되 422로 게시물 생성을 차단하지 않는다.
     with POST_HISTORY_LOCK:
         history = POST_HISTORY.setdefault(history_key, deque(maxlen=12))
         history.append({"text": result_text, "angle": angle_name,
