@@ -259,6 +259,48 @@ NAVER_HASHTAGS = {
     "fide":      ["#FIDE", "#피데", "#체스타이틀", "#CM타이틀", "#FM타이틀", "#국제체스"],
 }
 
+# 생성 기록: Render 인스턴스가 재시작되면 초기화되는 메모리 기록.
+# 영구 보존은 별도 DB 연동이 필요하다.
+from collections import deque
+from difflib import SequenceMatcher
+from threading import Lock
+
+POST_HISTORY = {}
+POST_HISTORY_LOCK = Lock()
+
+def post_body(text):
+    return text.split("===블로그본문===", 1)[-1].split("===인스타그램===", 1)[0].strip()
+
+def post_similarity(a, b):
+    def normalized(t):
+        t = re.sub(r"[^가-힣a-zA-Z0-9 ]+", " ", post_body(t).lower())
+        return " ".join(t.split())
+    aa, bb = normalized(a), normalized(b)
+    if not aa or not bb:
+        return 0.0
+    # 긴 본문 전체보다 반복되는 소제목·도입부를 더 중요하게 비교
+    heading = lambda t: " ".join(re.findall(r"(?:🔹|\\[)[^\\n]{3,65}", post_body(t)))
+    whole = SequenceMatcher(None, aa[:2300], bb[:2300]).ratio()
+    head = SequenceMatcher(None, heading(a), heading(b)).ratio() if heading(a) and heading(b) else 0
+    return round(max(whole, head * 0.85), 3)
+
+def post_issues(text, memo):
+    body = post_body(text)
+    issues = []
+    if "===블로그본문===" not in text or len(body) < 180:
+        issues.append("본문 누락 또는 지나치게 짧음")
+    if "생각키움연구소" not in body:
+        issues.append("브랜드명 누락")
+    if re.search(r"체스[,，]?\\s*어렵지\\s*않을까요|한\\s*어머니께서|학업\\s*능력\\s*향상|학교\\s*성적\\s*향상", body):
+        issues.append("상투적 도입·가상 상담·과장 표현")
+    # 실제 인용이 없을 때는 서술형 인용을 금지한다. 예시 질문은 따로 표시해야 한다.
+    if not re.search(r'["“][^"”]{4,}["”]', memo or "") and re.search(r'["“][^"”]{4,}["”]', body):
+        if "예시 질문" not in body and "질문 예시" not in body:
+            issues.append("근거 없는 직접 인용")
+    if re.search(r"홈페이지나 전화로|전화나 홈페이지로", body) and not re.search(r"홈페이지|전화", memo or ""):
+        issues.append("미확인 신청 경로")
+    return issues
+
 # ──────────────────────────────────────────────────────
 # 콘텐츠 유형별 글쓰기 방향
 # ──────────────────────────────────────────────────────
@@ -878,7 +920,14 @@ async def generate(
         ("실전과 복기 비교형", "실전에서의 의사결정과 복기에서의 자기점검이 어떻게 다른지 비교한다."),
         ("체험 전 안내형", "체험·상담을 고민하는 보호자가 알아야 할 수업 방식과 확인할 사항을 알려준다. 신청 조건은 지어내지 않는다."),
     ]
-    angle_name, angle_instruction = secrets.choice(editorial_angles)
+    history_key = (branch, normalized_type)
+    with POST_HISTORY_LOCK:
+        recent_posts = list(POST_HISTORY.get(history_key, []))
+    # 직전 글과 같은 구도는 가능한 한 피한다.
+    previous_angle = recent_posts[-1]["angle"] if recent_posts else None
+    angle_name, angle_instruction = secrets.choice(
+        [a for a in editorial_angles if a[0] != previous_angle] or editorial_angles
+    )
     intro_styles = [
         "교육 목표를 선명하게 제시하는 서술형", "전술·복기 등 실제 학습 활동으로 시작하는 설명형",
         "학부모에게 유용한 선택 기준을 먼저 제시하는 정보형", "교육과정의 사고 활동과 체스의 연결을 먼저 보여주는 비교형",
@@ -905,11 +954,14 @@ async def generate(
         "실전과 복기 비교형": "실전에서 선택하는 힘 / 복기에서 되짚는 힘 / 두 과정의 연결 / 수업 안내",
         "체험 전 안내형": "체험 전에 알아둘 점 / 수업에서 살펴볼 학습 활동 / 수준별 수업 선택 / 상담 안내",
     }
+    previous_context = "\\n".join(
+        f"- {item['angle']}: {item['excerpt']}" for item in recent_posts[-4:]
+    ) or "이 인스턴스에 이전 생성 기록 없음"
     variation_rule = f"""
 [이번 글의 편집 구도 — 매 생성마다 변경]
 - 선택 구도: {angle_name}
 - 구성 지침: {angle_instruction}\n- 이번 글에 적용할 고유한 소제목 흐름: {angle_sections[angle_name]}
-- 도입 스타일: {intro_style}
+- 도입 스타일: {intro_style}\n- 이전 글에서 반복하면 안 되는 실제 도입·소제목:\n{previous_context}
 - 모집 글이라도 매번 '걱정하는 학부모→집중력→복기→체험 신청' 순서로 쓰지 않는다.
 - 소제목·문단 순서·예시·첫 문장·마무리 표현을 구도에 맞게 바꾼다.
 - 동일한 '체스, 어렵지 않을까요?', '산만한 아이도 괜찮을까요?' 식의 도입을 반복하지 않는다.
@@ -1119,7 +1171,49 @@ async def generate(
         except Exception:
             pass
 
-    return {"text": result_text, "keywords": kws, "editorial_angle": angle_name}
+    # 생성 후 검수와 직전 글 유사도 검사. 재작성도 검수하고 가장 나은 후보를 선택한다.
+    with POST_HISTORY_LOCK:
+        compare_posts = list(POST_HISTORY.get(history_key, []))
+    def evaluate(candidate):
+        problems = post_issues(candidate, lesson)
+        similarity = max((post_similarity(candidate, p["text"]) for p in compare_posts), default=0.0)
+        return problems, similarity
+    issues, similarity = evaluate(result_text)
+    for attempt in range(2):
+        if not issues and similarity < 0.62:
+            break
+        retry_prompt = (
+            f"이전 원고가 품질 검사에 걸렸습니다. 문제: {', '.join(issues) or '이전 글과 유사함'}. "
+            f"기존 글과 유사도 {similarity:.0%}. "
+            f"이번 구도는 {angle_name}, 소제목 방향은 {angle_sections[angle_name]}입니다. "
+            "첫 문장, 소제목, 설명 사례, 글의 흐름을 완전히 새로 구성하세요. "
+            "실제 입력에 없는 대화·후기·수업 경험·상담 방법은 창작하지 마세요. "
+            "검색 키워드는 지역과 실제 지점을 구별하여 자연스럽게 사용하고, 생각키움연구소를 명시하세요. "
+            "교육과정과의 연결은 수업 활동과 공통되는 사고 과정으로만 설명하세요. "
+            "출력 구분자 ===제목후보===, ===블로그본문===, ===인스타그램===, ===해시태그===, ===대표이미지문구===, ===SEO품질점수=== 를 유지하세요.\\n"
+            "수정 대상:\\n" + result_text
+        )
+        try:
+            candidate_response = c.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role":"system","content":system_prompt},{"role":"user","content":retry_prompt}],
+                max_tokens=3000, temperature=0.85,
+            )
+            candidate = (candidate_response.choices[0].message.content or "").strip()
+            if "===블로그본문===" not in candidate:
+                break
+            new_issues, new_similarity = evaluate(candidate)
+            if (len(new_issues), new_similarity) < (len(issues), similarity):
+                result_text, issues, similarity = candidate, new_issues, new_similarity
+        except Exception:
+            break
+    with POST_HISTORY_LOCK:
+        history = POST_HISTORY.setdefault(history_key, deque(maxlen=12))
+        history.append({"text": result_text, "angle": angle_name,
+                        "excerpt": post_body(result_text)[:230]})
+    return {"text": result_text, "keywords": kws, "editorial_angle": angle_name,
+            "similarity": similarity, "quality_warnings": issues}
+
 
 
 @app.post("/api/privacy-check")
