@@ -966,7 +966,7 @@ async def generate(
 - 이 문구들은 검색자가 찾는 주제어와 브랜드를 연결한 표현이지 학원의 법적 상호나 별도 지점명이 아니다.
 - 제목 후보 중 1개와 본문 첫 부분에서 지역 + 사고력체스학원 + 생각키움연구소를 자연스럽게 연결한다.
 - 운양동은 홍보 대상 지역이다. 운양동 지점이 존재한다고 표현하지 않는다. 운양동 검색 유입은 실제 장기점 등 운영 지점으로 안내한다.
-- 사우점, 장기점, 구래점의 실제 위치를 혼동하지 않는다. 모든 지역 키워드를 한 게시물에 나열하지 않는다.
+- 사우점은 사우동, 장기점은 장기동, 구래점은 구래동에 있다. 풍무동·운양동·걸포동·북변동은 홍보 대상 지역으로 언급할 수 있지만 사우점의 소재지라고 절대 쓰지 않는다. 모든 지역 키워드를 한 게시물에 나열하지 않는다.
 - 지역 검색어를 정확히 반복하기 위해 문장을 어색하게 만들지 않는다. '사우동체스학원이라 불리는 저희' 같은 표현 금지.
 [생각키움연구소 사고력 체스 수업의 구체적인 교육 활동]
 - 입문: 기물 이동과 규칙, 공격받는 기물 발견, 안전한 칸 찾기, 간단한 체크·체크메이트 판단.
@@ -1236,6 +1236,15 @@ async def generate(
         if branch not in body or any(re.search(r"(?:생각키움연구소\\s*)?" + re.escape(b) + r"(?:의|에서는|에서|은|는|을|를| 수업| 모집| 체험|에)", body) for b in other_branches):
             problems.append("선택 지점 불일치: 반드시 " + branch + "만 홍보")
 
+        # 홍보 대상 지역을 실제 지점 소재지로 잘못 쓰는 경우 차단
+        wrong_location = {
+            "사우점": ["풍무동", "운양동", "구래동", "장기동"],
+            "장기점": ["풍무동", "운양동", "구래동", "사우동"],
+            "구래점": ["풍무동", "운양동", "사우동", "장기동"],
+        }
+        for area in wrong_location.get(branch, []):
+            if re.search(re.escape(area) + r"\\s*(?:에|에\\s*있는|에\\s*위치한|소재|에\\s*자리한)\\s*(?:위치한\\s*)?(?:생각키움연구소\\s*)?" + re.escape(branch), body):
+                problems.append("실제 지점 위치 오류: " + area + "에 " + branch + "이 있는 것처럼 표현")
         similarity = max((post_similarity(candidate, p["text"]) for p in compare_posts), default=0.0)
         return problems, similarity
     issues, similarity = evaluate(result_text)
@@ -1269,8 +1278,8 @@ async def generate(
         except Exception:
             break
     # 지점이 틀린 홍보글을 정상 결과로 내보내지 않는다.
-    if any("선택 지점 불일치" in item for item in issues):
-        raise HTTPException(422, f"선택하신 {branch}과 생성된 글의 지점이 달라 안전하게 중단했습니다. 다시 생성해 주세요.")
+    if any(("선택 지점 불일치" in item or "실제 지점 위치 오류" in item) for item in issues):
+        raise HTTPException(422, f"선택하신 {branch}의 지점 또는 소재지 정보가 잘못 생성되어 게시를 중단했습니다. 다시 생성해 주세요.")
     with POST_HISTORY_LOCK:
         history = POST_HISTORY.setdefault(history_key, deque(maxlen=12))
         history.append({"text": result_text, "angle": angle_name,
