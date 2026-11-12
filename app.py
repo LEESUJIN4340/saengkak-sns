@@ -747,7 +747,11 @@ async def generate(
     branch: str = Form(...),
     content_type: str = Form(...),
     target: str = Form(...),
-    lesson: str = Form(...)
+    lesson: str = Form(...),
+    recent_posts: str = Form("[]"),
+    intent: str = Form(""),
+    keyword: str = Form(""),
+    branch_profile: str = Form("{}")
 ):
     kws = pick_keywords(branch, lesson, content_type)
     hashtags = build_hashtags(branch, content_type, target)
@@ -922,9 +926,20 @@ async def generate(
     ]
     history_key = (branch, normalized_type)
     with POST_HISTORY_LOCK:
-        recent_posts = list(POST_HISTORY.get(history_key, []))
+        recent_history = list(POST_HISTORY.get(history_key, []))
+    try:
+        client_history = json.loads(recent_posts)
+        if isinstance(client_history, list):
+            for item in client_history[:8]:
+                if isinstance(item, dict):
+                    body = str(item.get("body") or "")[:700]
+                    if body:
+                        recent_history.append({"text": "===블로그본문===\\n" + body,
+                                               "angle": "이전 게시글", "excerpt": body[:230]})
+    except (ValueError, TypeError):
+        pass
     # 직전 글과 같은 구도는 가능한 한 피한다.
-    previous_angle = recent_posts[-1]["angle"] if recent_posts else None
+    previous_angle = recent_history[-1]["angle"] if recent_history else None
     angle_name, angle_instruction = secrets.choice(
         [a for a in editorial_angles if a[0] != previous_angle] or editorial_angles
     )
@@ -955,7 +970,7 @@ async def generate(
         "체험 전 안내형": "체험 전에 알아둘 점 / 수업에서 살펴볼 학습 활동 / 수준별 수업 선택 / 상담 안내",
     }
     previous_context = "\\n".join(
-        f"- {item['angle']}: {item['excerpt']}" for item in recent_posts[-4:]
+        f"- {item['angle']}: {item['excerpt']}" for item in recent_history[-4:]
     ) or "이 인스턴스에 이전 생성 기록 없음"
     variation_rule = f"""
 [이번 글의 편집 구도 — 매 생성마다 변경]
@@ -1146,7 +1161,7 @@ async def generate(
         violates = True
     if "생각키움연구소" not in body_section:
         violates = True
-    if violates:
+    if violates and not recent_history:
         try:
             repair_prompt = (
                 "아래 게시물은 검수에서 탈락했습니다. 전체 출력 구분자와 지역 키워드는 유지하되, "
@@ -1172,14 +1187,13 @@ async def generate(
             pass
 
     # 생성 후 검수와 직전 글 유사도 검사. 재작성도 검수하고 가장 나은 후보를 선택한다.
-    with POST_HISTORY_LOCK:
-        compare_posts = list(POST_HISTORY.get(history_key, []))
+    compare_posts = recent_history
     def evaluate(candidate):
         problems = post_issues(candidate, lesson)
         similarity = max((post_similarity(candidate, p["text"]) for p in compare_posts), default=0.0)
         return problems, similarity
     issues, similarity = evaluate(result_text)
-    for attempt in range(2):
+    for attempt in range(1):
         if not issues and similarity < 0.62:
             break
         retry_prompt = (
