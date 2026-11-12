@@ -1306,6 +1306,22 @@ async def generate(
                 "===인스타그램===" + parts[1] if len(parts) > 1 else ""
             )
         issues, similarity = evaluate(result_text)
+    # 지역 검색어와 브랜드를 쉼표로 기계적으로 나열한 문장만 교정한다.
+    # 교육 내용, 강사 자격, 성과, 지점 선택은 수정하지 않는다.
+    local_area = {"사우점": "사우동", "장기점": "장기동", "구래점": "구래동"}[branch]
+    for label in (f"김포 {local_area}체스학원", f"{local_area}체스학원"):
+        result_text = result_text.replace(
+            f"{label}, 생각키움연구소 {branch}에서는",
+            f"김포 {local_area}에서 사고력 체스 수업을 운영하는 생각키움연구소 {branch}에서는"
+        )
+        result_text = result_text.replace(
+            f"안녕하세요, {label}, 생각키움연구소입니다.",
+            f"김포 {local_area}의 사고력 체스 교육기관, 생각키움연구소 {branch}입니다."
+        )
+        result_text = result_text.replace(
+            f"{label}, 생각키움연구소입니다.",
+            f"김포 {local_area}의 사고력 체스 교육기관, 생각키움연구소 {branch}입니다."
+        )
     # 경고는 응답에 포함하되 422로 게시물 생성을 차단하지 않는다.
     with POST_HISTORY_LOCK:
         history = POST_HISTORY.setdefault(history_key, deque(maxlen=12))
