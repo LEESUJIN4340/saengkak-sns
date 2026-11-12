@@ -709,7 +709,8 @@ async def generate(
 ):
     kws = pick_keywords(branch, lesson, content_type)
     hashtags = build_hashtags(branch, content_type, target)
-    guide = CONTENT_GUIDE.get(content_type, CONTENT_GUIDE["수업후기"])
+    normalized_type = {"원생모집": "신규모집", "원생 모집": "신규모집", "신규 모집": "신규모집"}.get(content_type, content_type)
+    guide = CONTENT_GUIDE.get(normalized_type, CONTENT_GUIDE["수업후기"])
     target_ctx = get_target_context(target)
     chess_term_section = build_chess_term_section(lesson)
     area_desc = BRANCH_AREA.get(branch, "김포")
@@ -1008,10 +1009,8 @@ async def generate(
 - 최종 출력 전 사실 없는 직접 인용, 상투적 질문형 제목, 키워드 과다 반복, 지점 혼동을 다시 검사합니다.
 
 ===인스타그램===
-블로그 본문에서 가장 인상적인 한 장면을 골라 그 순간만 집중해서 씁니다.
-전체 요약이 아니라 그 순간 안으로 들어가는 느낌으로.
-예) 수업 중 아이가 "어? 이렇게 하면 왕이 도망갈 데가 없잖아요!" 하고
-나직이 혼잣말을 내뱉는 순간이 있었습니다. 그 표정이 오늘도 남습니다.
+블로그의 실제 정보 중 한 가지 교육적 가치를 골라 소개합니다.
+실제 장면이나 발언이 제공되지 않았다면 경험담을 창작하지 않습니다.
 이모지는 문장 흐름을 자르지 않는 위치에 1~2개만 사용합니다.
 200~300자. 해시태그 없이 본문만.
 
@@ -1027,10 +1026,10 @@ async def generate(
 1. 검색의도적합성: X점 — 한 줄 평가
 2. 지역관련성: X점 — 한 줄 평가
 3. 제목·본문 키워드 일치: X점 — 한 줄 평가
-4. 핵심키워드 배치 (도입·중간·마무리 3회): X점 — 한 줄 평가
+4. 핵심키워드의 자연스러운 사용: X점 — 한 줄 평가
 5. 문장 다양성 (반복 구조 없는지): X점 — 한 줄 평가
 6. 글 흐름 연결성 (단락 간 이야기 이어짐): X점 — 한 줄 평가
-7. 현장감·대화 장면: X점 — 한 줄 평가
+7. 사실 기반 구체성·검증된 대화: X점 — 한 줄 평가
 8. 체스 전문용어 정확성: X점 — 한 줄 평가
 9. 교육효과 구체성 (추상 표현 없는지): X점 — 한 줄 평가
 10. 학부모 유용정보: X점 — 한 줄 평가
@@ -1079,6 +1078,46 @@ async def generate(
             result_text = r2.choices[0].message.content.strip()
         else:
             result_text = fixed_text
+
+    # 생성물 검수: 금지된 상투적 도입·실제 입력에 없는 상담 경험·근거 없는 학업 효과를 발견하면 재작성한다.
+    import re
+    user_supplied_quote = bool(re.search(r'["“][^"”]{4,}["”]', lesson or ""))
+    forbidden_patterns = [
+        r"체스[,，]?\\s*어렵지\\s*않을까요",
+        r"집중력이\\s*(?:부족한|짧은)\\s*아이도",
+        r"한\\s*(?:어머니|학부모|학생)(?:께서|이|은)?\\s*(?:상담|수업|말씀)",
+        r"(?:학업\\s*능력|학교\\s*성적)(?:의)?\\s*향상",
+    ]
+    body_section = result_text.split("===블로그본문===", 1)[-1].split("===인스타그램===", 1)[0]
+    violates = any(re.search(p, body_section) for p in forbidden_patterns)
+    if not user_supplied_quote and re.search(r'["“][^"”]{4,}["”]', body_section):
+        violates = True
+    if "생각키움연구소" not in body_section:
+        violates = True
+    if violates:
+        try:
+            repair_prompt = (
+                "아래 게시물은 검수에서 탈락했습니다. 전체 출력 구분자와 지역 키워드는 유지하되, "
+                "블로그 본문을 선택된 편집 구도에 맞춰 새로 작성하세요. "
+                f"선택 구도: {angle_name}. 지정된 소제목 흐름: {angle_sections[angle_name]}. "
+                "제목과 소제목을 질문형으로 시작하지 마세요. "
+                "실제 메모에 없는 학부모 상담, 학생 발언, 수업 현장 경험을 절대 창작하지 마세요. "
+                "실제 발언이 없다면 따옴표 대화도 사용하지 마세요. "
+                "학업 성적이나 집중력 향상 효과를 보장하지 마세요. "
+                "학원 이름 생각키움연구소를 반드시 넣고 검색어를 고유명사처럼 반복하지 마세요. "
+                "기존 문장의 단어만 바꾸지 말고 내용 구성과 소제목을 완전히 변경하세요.\\n\\n"
+                + result_text
+            )
+            rr = c.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": repair_prompt}],
+                max_tokens=3000, temperature=0.65,
+            )
+            repaired = (rr.choices[0].message.content or "").strip()
+            if "===블로그본문===" in repaired:
+                result_text = repaired
+        except Exception:
+            pass
 
     return {"text": result_text, "keywords": kws, "editorial_angle": angle_name}
 
