@@ -63,6 +63,45 @@ class Writer2SmokeTests(unittest.TestCase):
         self.assertEqual(result.status_code, 200, result.text[:500])
         self.assertNotIn("풍무동에 위치한 생각키움연구소 사우점", result.json()["text"])
 
+    def test_editor_rejects_wrong_branch_revision(self):
+        class MisleadingEditor(FakeCompletions):
+            def create(self, **kwargs):
+                if kwargs.get("response_format"):
+                    return response('{"pass":false,"issues":["지점 오류"],"fix_instruction":"지점을 수정하세요"}')
+                messages = str(kwargs.get("messages", []))
+                if "편집 검수 지적만 고치세요" in messages:
+                    return response(
+                        "===제목후보===\\n구래점 안내\\n===블로그본문===\\n"
+                        + "생각키움연구소 구래점에서 사고력 체스를 운영합니다. " * 12
+                        + "\\n===인스타그램===\\n구래점 안내"
+                        + "\\n===해시태그===\\n#김포체스"
+                    )
+                return super().create(**kwargs)
+        fake = MisleadingEditor()
+        with patch.object(app, "get_client", return_value=SimpleNamespace(chat=SimpleNamespace(completions=fake))):
+            result = TestClient(app.app).post("/api/generate", data={
+                "branch":"사우점","content_type":"신규모집",
+                "target":"초등학생","lesson":"사우점의 후보 수 비교 수업"
+            })
+        self.assertEqual(result.status_code, 200, result.text[:500])
+        self.assertIn("사우점", result.json()["text"])
+        self.assertNotIn("생각키움연구소 구래점에서", result.json()["text"])
+
+    def test_review_issues_not_silently_discarded(self):
+        class StrictEditor(FakeCompletions):
+            def create(self, **kwargs):
+                if kwargs.get("response_format"):
+                    return response('{"pass":false,"issues":["실제 수업 사례 검증 필요"],"fix_instruction":""}')
+                return super().create(**kwargs)
+        fake = StrictEditor()
+        with patch.object(app, "get_client", return_value=SimpleNamespace(chat=SimpleNamespace(completions=fake))):
+            result = TestClient(app.app).post("/api/generate", data={
+                "branch":"장기점","content_type":"신규모집",
+                "target":"초등학생","lesson":"기물 교환과 전술 수업"
+            })
+        self.assertEqual(result.status_code, 200, result.text[:500])
+        self.assertTrue(any("실제 수업 사례 검증 필요" in x for x in result.json()["quality_warnings"]))
+
     def test_health(self):
         self.assertEqual(TestClient(app.app).get("/health").status_code, 200)
 
