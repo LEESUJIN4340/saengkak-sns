@@ -1,0 +1,21 @@
+name: Writer 2.0 smoke tests
+on:
+  pull_request:
+    paths:
+      - app.py
+      - test_writer2_smoke.py
+      - .github/workflows/writer2-smoke.yml
+  push:
+    branches:
+      - feature/sns-writer-2-review
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt httpx
+      - run: python -m compileall -q app.py test_writer2_smoke.py
+      - run: python -m unittest -v test_writer2_smoke.py

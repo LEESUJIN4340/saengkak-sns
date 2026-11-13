@@ -291,7 +291,7 @@ def post_issues(text, memo):
         issues.append("본문 누락 또는 지나치게 짧음")
     if "생각키움연구소" not in body:
         issues.append("브랜드명 누락")
-    if re.search(r"체스[,，]?\\s*어렵지\\s*않을까요|한\\s*어머니께서|학업\\s*능력\\s*향상|학교\\s*성적\\s*향상", body):
+    if re.search(r"체스[,，]?\s*어렵지\s*않을까요|한\s*어머니께서|학업\s*능력\s*향상|학교\s*성적\s*향상", body):
         issues.append("상투적 도입·가상 상담·과장 표현")
     # 실제 인용이 없을 때는 서술형 인용을 금지한다. 예시 질문은 따로 표시해야 한다.
     if not re.search(r'["“][^"”]{4,}["”]', memo or "") and re.search(r'["“][^"”]{4,}["”]', body):
@@ -640,9 +640,9 @@ async def daangn_draft(
 
     # ── facts가 짧으면 지점 기본 소개로 보완 ─────────
     daangn_default_facts = {
-        "구래점": "구래점 신규 개원, FIDE 공인 트레이너 강사진, 입문~중급반 운영, 영어·중국어체스 병행",
-        "사우점": "사고력체스 수업, FIDE 공인 트레이너 지도, 중급~선수반 운영, 스스로 생각하는 힘 키우기",
-        "장기점": "체스 첫걸음, FIDE 공인 트레이너 강사진, 입문~기본반 운영, 유아·초등 사고력 체스",
+        "구래점": "구래점 사고력 체스 수업, 입문~중급반 운영, 영어·중국어체스 병행",
+        "사우점": "사고력 체스 수업, 중급~선수반 운영, 후보 수 비교와 대국 복기",
+        "장기점": "체스 첫걸음, 입문~기본반 운영, 유아·초등 사고력 체스",
     }
     effective_facts = facts.strip() if facts and len(facts.strip()) >= 15 else ""
     if not effective_facts:
@@ -664,24 +664,12 @@ async def daangn_draft(
         "• '선생님은 ~했습니다' 같은 3인칭 관찰자 시점은 절대 사용하지 않습니다.\n"
         "• 당근은 동네 이웃에게 말 걸듯 친근하고 따뜻하게 씁니다. 과장된 광고 문체 금지.\n"
         "• 확인되지 않은 수상·할인·일정·체험수업을 지어내지 않습니다.\n\n"
-        "[글 구조 — 반드시 이 순서로]\n"
-        "① 도입: '안녕하세요'로 절대 시작하지 않습니다.\n"
-        "   학부모가 공감할 고민이나 상황으로 시작하세요.\n"
-        "   예) '집중력이 짧은 아이, 혹시 고민이신가요?'\n"
-        "       '학원은 싫다는 아이가 체스만큼은 먼저 가자고 해요.'\n"
-        "       '오늘 수업에서 신기한 일이 있었어요.'\n"
-        "② 수업 장면: 기다림+힌트 한 마디로 아이가 스스로 찾아내는 구체적인 장면 1개.\n"
-        "   힌트는 아이가 고민하는 기물 이름을 그대로 반복하면 안 됩니다.\n"
-        "   힌트는 아이가 '못 보고 있는 것'을 살짝 가리키는 말이어야 합니다.\n"
-        "   예) 룩을 고민할 때 → '저 칸이 비어있지?' 또는 '퀸이 길을 막고 있는 거 보여?'\n"
-        "   예) 나이트를 고민할 때 → '여기서 L자로 가면 어디가 나오지?'\n"
-        "   (고민하던 기물 이름을 그대로 되묻는 힌트는 절대 사용 금지)\n"
-        "③ 변화: 그 장면이 아이에게 어떤 변화나 반응으로 이어졌는지 한 문장.\n"
-        "   구체적인 행동이나 표정으로 보여주세요. 대사보다 장면이 더 자연스럽습니다.\n"
-        "   예) '그날 이후로 아이가 스스로 가방을 챙기기 시작했어요.'\n"
-        "   예) '집에 오자마자 체스판을 꺼내는 아이를 보면서, 잘 됐다 싶었어요.'\n"
-        "   예) '수업이 끝나도 자리를 안 뜨려는 아이를 보며 저도 모르게 웃었습니다.'\n"
-        "④ 마무리: 위치·과정 등 실용 정보를 자연스럽게 한두 문장으로 덧붙입니다.\n\n"
+        "[글 구조 — 주제별로 달라지는 안내]\\n"
+        "• 제목과 도입은 실제 주제에 맞춰 쓰고 본문에서 약속한 내용을 구체적으로 설명합니다.\\n"
+        "• 수업 기록이 없다면 학생 대사, 학부모 후기, 현장 장면, 성과를 창작하지 않습니다.\\n"
+        "• 모집은 수업 대상·활동·상담 정보를, 수업후기는 제공된 사실을 중심으로 씁니다.\\n"
+        "• 체스의 후보 수 비교·전술·복기 중 하나를 구체적으로 설명하고 매번 다른 구성을 선택합니다.\\n"
+        "• 2022 개정 교육과정은 공통 사고 활동으로만 연결하고 성적 향상을 보장하지 않습니다.\\n\\n"
         "[체스 용어]\n"
         "• '기물'만 사용 (말·돌·블록·체스조각 금지)\n"
         "• 기물 이름: 킹·퀸·룩·비숍·나이트·폰\n\n"
@@ -704,7 +692,7 @@ async def daangn_draft(
         f"{branch_info_text}\n\n"
         "위 정보를 바탕으로 당근 비즈프로필용 소식을 작성하세요.\n"
         "제목: 30자 이내, 동네 이웃에게 말 걸듯 친근하게.\n"
-        "본문: 200~450자. 1인칭으로, 수업 현장 장면 하나를 중심으로 풀어쓰세요.\n"
+        "본문: 200~450자. 1인칭으로, 실제 장면이 제공된 경우에만 활용하고, 그렇지 않으면 사실 중심 안내글로 작성하세요.\n"
         "JSON만 출력: {\"title\":\"제목\",\"body\":\"본문\",\"missing_info\":[]}"
     )
 
@@ -728,8 +716,49 @@ async def daangn_draft(
         if not season["allow_new_semester"] and has_new_semester_phrase(body_text):
             body_text = fix_new_semester_phrase(body_text, season["label"])
 
+        # Writer 2.0 당근 독립 검수: 장애 시 기존 초안 보존
+        title_text = str(data.get("title", ""))
+        if title_text and body_text:
+            try:
+                check_prompt = (
+                    "당근 홍보글 독립 편집자입니다. JSON만 반환하세요: "
+                    '{"pass":true,"fix_instruction":""}. '
+                    "제목에서 약속한 내용을 본문이 설명하는지, 실제 메모에 없는 "
+                    "수업 장면·대화·학부모 후기를 만들었는지, 지점과 검색어가 "
+                    "정확한지 검수하세요. 지점: " + branch +
+                    "\n실제 소재: " + (topic + " " + effective_facts)[:800] +
+                    "\n제목: " + title_text + "\n본문: " + body_text
+                )
+                check = c.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": check_prompt}],
+                    response_format={"type": "json_object"},
+                    max_tokens=250, temperature=0.1,
+                )
+                feedback = json.loads(check.choices[0].message.content or "{}")
+                if feedback.get("pass") is False and feedback.get("fix_instruction"):
+                    revised_response = c.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content":
+                                "다음 검수 지적을 고쳐 제목 30자 이내, 본문 200~450자의 "
+                                'JSON {"title":"","body":"","missing_info":[]}만 출력하세요. '
+                                "새 사실은 만들지 말고 지점 " + branch + "을 유지하세요.\n"
+                                + str(feedback["fix_instruction"])[:500] +
+                                "\n제목: " + title_text + "\n본문: " + body_text}
+                        ],
+                        response_format={"type": "json_object"},
+                        max_tokens=900, temperature=0.3,
+                    )
+                    revised = json.loads(revised_response.choices[0].message.content or "{}")
+                    new_title, new_body = str(revised.get("title", "")), str(revised.get("body", ""))
+                    if new_title and new_body and branch in (new_title + " " + new_body):
+                        title_text, body_text = new_title, new_body
+            except Exception:
+                pass
         return {
-            "title": str(data.get("title", "")),
+            "title": title_text,
             "body": body_text,
             "missing_info": data.get("missing_info", [])
         }
@@ -936,7 +965,7 @@ async def generate(
                 if isinstance(item, dict):
                     body = str(item.get("body") or "")[:700]
                     if body:
-                        recent_history.append({"text": "===블로그본문===\\n" + body,
+                        recent_history.append({"text": "===블로그본문===\n" + body,
                                                "angle": "이전 게시글", "excerpt": body[:230]})
     except (ValueError, TypeError):
         pass
@@ -1012,10 +1041,36 @@ async def generate(
         "실전과 복기 비교형": "실전에서 선택하는 힘 / 복기에서 되짚는 힘 / 두 과정의 연결 / 수업 안내",
         "체험 전 안내형": "체험 전에 알아둘 점 / 수업에서 살펴볼 학습 활동 / 수준별 수업 선택 / 상담 안내",
     }
-    previous_context = "\\n".join(
+    # Writer 2.0 / 1단계: 사용자 의도와 검증된 수업 소재로 편집 계획 수립
+    branch_local = {"사우점": "사우동", "장기점": "장기동", "구래점": "구래동"}[branch]
+    audience_region = next((area for area in ("풍무동", "운양동", "걸포동", "북변동", "사우동", "장기동", "구래동")
+                            if area in (lesson + " " + keyword)), branch_local)
+    teaching_topics = {
+        "교육과정 연결형": "후보 수의 근거 설명과 지식정보처리·창의적 사고 역량",
+        "수업 과정 해설형": "전술 학습과 대국·복기의 구체적 차이",
+        "학부모 선택 가이드형": "체스 경험과 학습 수준에 맞는 수업 선택",
+        "체스 개념 집중형": "기물 가치·포크·핀 등 한 개념의 정확한 이해",
+        "교육 철학 에세이형": "관찰·가설·검증·선택·성찰의 사고 과정",
+        "학습 단계 소개형": "입문·기본·중급·상급·선수반의 학습 목표",
+        "실전과 복기 비교형": "대국의 의사결정과 복기의 자기점검",
+        "체험 전 안내형": "체험 전 확인할 학습 수준과 상담 질문",
+    }
+    editorial_plan = (
+        f"목적: {normalized_type}; 실제 지점: 생각키움연구소 {branch}({branch_local}); "
+        f"검색 대상 지역: {audience_region}(실제 지점 소재지와 구분); "
+        f"독자: {target}; 중심 소재: {teaching_topics[angle_name]}; "
+        f"실제 제공 메모: {lesson[:650]}; "
+        "첫 문단에서 독자에게 줄 정보를 약속하고 각 소제목 아래에서 그 약속에 답한다. "
+        "교육부 2022 개정 교육과정의 핵심역량과 체스 활동은 유사한 사고 과정으로만 연결한다. "
+        "실제 사례·자격·교육 효과를 새로 만들어내지 않는다."
+    )
+    previous_context = "\n".join(
         f"- {item['angle']}: {item['excerpt']}" for item in recent_history[-4:]
     ) or "이 인스턴스에 이전 생성 기록 없음"
     variation_rule = f"""
+[1단계 편집 기획 — 도입·소제목·본문·마무리 모두 준수]
+{editorial_plan}
+
 [이번 글의 편집 구도 — 매 생성마다 변경]
 - 선택 구도: {angle_name}
 - 구성 지침: {angle_instruction}\n- 다음은 소제목으로 그대로 복사할 문구가 아니라 구성의 참고 주제다: {angle_sections[angle_name]}
@@ -1126,10 +1181,15 @@ async def generate(
 - 최종 출력 전 사실 없는 직접 인용, 상투적 질문형 제목, 키워드 과다 반복, 지점 혼동을 다시 검사합니다.
 
 ===인스타그램===
-블로그의 실제 정보 중 한 가지 교육적 가치를 골라 소개합니다.
-실제 장면이나 발언이 제공되지 않았다면 경험담을 창작하지 않습니다.
-이모지는 문장 흐름을 자르지 않는 위치에 1~2개만 사용합니다.
-200~300자. 해시태그 없이 본문만.
+[인스타그램 전용 편집 규칙 — 블로그와 별개로 작성]
+- 선택한 콘텐츠 유형({content_type})을 정확히 유지합니다. 수업후기라면 학원 소개·반별 안내·상담 안내로 대체하지 마세요. 입력 메모에 실제 수업 활동이 없으면 '수업후기'를 꾸며내지 말고, 검증된 수업 방식의 한 장면을 설명하는 교육 정보형 글로 전환하되 가짜 현장 경험처럼 쓰지 마세요.
+- 첫 1~2문장은 김포·{branch} 지역 학부모가 겪는 구체적인 고민이나 체스 수업의 의외의 교육적 포인트를 담아 스크롤을 멈추게 합니다. 뻔한 '체스는 단순한 게임이 아닙니다'와 '안녕하세요' 도입 금지.
+- 중간에는 독자가 저장하거나 다시 찾아볼 이유가 되는 실제적인 정보 하나(예: 아이가 수를 결정하기 전에 확인할 2가지, 복기에서 확인할 질문 2가지)를 짧고 명료하게 제시합니다. 효과·성과를 보장하거나 실제 학생의 반응·대화를 창작하지 않습니다.
+- 마지막에는 본문 주제에 맞는 자연스러운 저장·댓글·문의 유도 문장 한 줄만 배치합니다. 상시 상담·체험 수업·홈페이지·자격·운영 일정 등 입력으로 확인되지 않은 사실은 절대 추가하지 않습니다.
+- '김포체스학원' 또는 '구래동체스' 등 선택 지점에 맞는 핵심 검색어를 첫 부분에 자연스럽게 한 번만 사용하고 '생각키움연구소 {branch}'를 한 번 명시합니다. 검색어 나열·반복·인위적 지역명 혼합 금지. 검색 상위 노출을 보장하는 문구 금지.
+- 블로그의 소제목·반 소개·상담 안내를 복사하거나 같은 문단 구조를 반복하지 않습니다. 실용적인 한 가지 이야기로 구성합니다.
+- 모바일에서 읽기 좋은 짧은 문단 3~5개, 약 250~450자. 이모지는 1~2개만, 해시태그는 본문에 넣지 않습니다. 해시태그는 별도 ===해시태그=== 섹션에 둡니다.
+- 작성 후 자체 점검: (1) 콘텐츠 유형 일치 (2) 저장할 정보의 가치 (3) 첫 문장 주목도 (4) 사실성 (5) 지역 검색어 자연스러움 (6) 블로그와의 차별성. 미달하면 인스타그램 부분만 다시 작성합니다.
 
 ===해시태그===
 {hashtags}
@@ -1242,7 +1302,7 @@ async def generate(
         problems = post_issues(candidate, lesson)
         body = post_body(candidate)
         other_branches = [b for b in ("사우점", "장기점", "구래점") if b != branch]
-        if branch not in body or any(re.search(r"(?:생각키움연구소\\s*)?" + re.escape(b) + r"(?:의|에서는|에서|은|는|을|를| 수업| 모집| 체험|에)", body) for b in other_branches):
+        if branch not in body or any(re.search(r"(?:생각키움연구소\s*)?" + re.escape(b) + r"(?:의|에서는|에서|은|는|을|를| 수업| 모집| 체험|에)", body) for b in other_branches):
             problems.append("선택 지점 불일치: 반드시 " + branch + "만 홍보")
 
         # 홍보 대상 지역을 실제 지점 소재지로 잘못 쓰는 경우 차단
@@ -1252,17 +1312,17 @@ async def generate(
             "구래점": ["풍무동", "운양동", "사우동", "장기동"],
         }
         for area in wrong_location.get(branch, []):
-            if re.search(re.escape(area) + r"\\s*(?:에|에\\s*있는|에\\s*위치한|소재|에\\s*자리한)\\s*(?:위치한\\s*)?(?:생각키움연구소\\s*)?" + re.escape(branch), body):
+            if re.search(re.escape(area) + r"\s*(?:에|에\s*있는|에\s*위치한|소재|에\s*자리한)\s*(?:위치한\s*)?(?:생각키움연구소\s*)?" + re.escape(branch), body):
                 problems.append("실제 지점 위치 오류: " + area + "에 " + branch + "이 있는 것처럼 표현")
         # 제목-본문의 기본적인 의미 일치 검증: '체험 전 안내'를 약속했으면
         # 실제로 확인할 사항을 설명해야 한다. 단순 체스 교육 홍보만 있으면 재작성.
-        trial_promise = bool(re.search(r"체험\\s*(?:수업)?\\s*전(?:에)?\\s*(?:알아|확인|준비)|체험\\s*전\\s*안내", body))
+        trial_promise = bool(re.search(r"체험\s*(?:수업)?\s*전(?:에)?\s*(?:알아|확인|준비)|체험\s*전\s*안내", body))
         if trial_promise:
             concrete_checks = sum(bool(re.search(pattern, body)) for pattern in (
-                r"상담\\s*(?:시|에서|때)|상담할\\s*때|상담\\s*전에",
-                r"체스\\s*경험|입문\\s*여부|학습\\s*수준|현재\\s*수준",
-                r"확인할\\s*(?:점|사항)|살펴볼\\s*(?:점|사항)|체험\\s*중",
-                r"준비물|소요\\s*시간|진행\\s*방식|예약\\s*방법",
+                r"상담\s*(?:시|에서|때)|상담할\s*때|상담\s*전에",
+                r"체스\s*경험|입문\s*여부|학습\s*수준|현재\s*수준",
+                r"확인할\s*(?:점|사항)|살펴볼\s*(?:점|사항)|체험\s*중",
+                r"준비물|소요\s*시간|진행\s*방식|예약\s*방법",
             ))
             if concrete_checks < 2:
                 problems.append("체험 전 안내라는 제목에 맞는 구체적인 확인 사항 부족")
@@ -1298,6 +1358,55 @@ async def generate(
                 result_text, issues, similarity = candidate, new_issues, new_similarity
         except Exception:
             break
+    # Writer 2.0 / 3단계: 초안의 독자 효용과 제목-본문 일치 검토.
+    # 검수 API 장애 시에도 기존 생성 기능을 유지한다.
+    try:
+        review_prompt = (
+            "당신은 한국어 학원 홍보 원고의 독립 편집자입니다. JSON 객체만 반환하세요. "
+            '{"pass":true,"issues":[],"fix_instruction":""} 형식. '
+            "다음 항목을 엄격하게 검토: (1) 도입에서 예고한 정보에 본문이 실제 답하는지 "
+            "(2) 제목과 소제목의 약속을 해당 문단이 충족하는지 "
+            "(3) 지점과 대상 지역을 혼동하지 않는지 "
+            "(4) 검색어를 상호처럼 쉼표로 나열하지 않는지 "
+            "(5) 체스 전술·교육과정 설명이 구체적이고 과장 없는지 "
+            "(6) 이전 글과 소제목·도입·전개가 반복되지 않는지 "
+            "(7) 블로그와 인스타그램이 각각 읽기 좋은 독립 원고인지. "
+            "없는 수업 사실이나 대화를 만들라고 요구하지 마세요. "
+            "검토 계획: " + editorial_plan +
+            "\n최근 글: " + previous_context[:700] +
+            "\n검토할 원고:\n" + result_text[:8500]
+        )
+        review_response = c.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": review_prompt}],
+            response_format={"type": "json_object"},
+            max_tokens=450,
+            temperature=0.1,
+        )
+        review_data = json.loads(review_response.choices[0].message.content or "{}")
+        review_issues = review_data.get("issues", [])
+        if isinstance(review_issues, list):
+            issues.extend(str(issue)[:120] for issue in review_issues[:4] if issue)
+        if review_data.get("pass") is False and review_data.get("fix_instruction"):
+            instruction = str(review_data["fix_instruction"])[:600]
+            revision = c.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": "아래 원고의 사실과 지점 및 출력 구분자를 보존하면서 편집 검수 지적만 고치세요. 새 사실을 만들지 마세요.\n"
+                     + instruction + "\n" + result_text}
+                ],
+                max_tokens=3000,
+                temperature=0.55,
+            )
+            revised = (revision.choices[0].message.content or "").strip()
+            required = ("===제목후보===", "===블로그본문===", "===인스타그램===", "===해시태그===")
+            if all(token in revised for token in required):
+                revised_issues, revised_similarity = evaluate(revised)
+                if not revised_issues and revised_similarity < 0.62:
+                    result_text, issues, similarity = revised, revised_issues, revised_similarity
+    except Exception:
+        pass
     # 위치 관련 오류는 안전한 표현으로 교정해 글 생성을 불필요하게 차단하지 않는다.
     # 지점명을 바꿔 쓰는 것만으로 소재지를 허위로 표현하지 않도록 문장 단위로 처리한다.
     if any(("선택 지점 불일치" in item or "실제 지점 위치 오류" in item) for item in issues):
@@ -1316,7 +1425,7 @@ async def generate(
                 for area in {"사우점": ("풍무동", "운양동", "구래동", "장기동"),
                              "장기점": ("풍무동", "운양동", "구래동", "사우동"),
                              "구래점": ("풍무동", "운양동", "사우동", "장기동")}.get(branch, ()):
-                    line = re.sub(re.escape(area) + r"\\s*에\\s*위치한\\s*(?:생각키움연구소\\s*)?" + re.escape(branch),
+                    line = re.sub(re.escape(area) + r"\s*에\s*위치한\s*(?:생각키움연구소\s*)?" + re.escape(branch),
                                   area + " 학부모를 위한 생각키움연구소 " + branch, line)
                 if not other:
                     safe_lines.append(line)
@@ -1343,12 +1452,27 @@ async def generate(
             f"{label}, 생각키움연구소입니다.",
             f"김포 {local_area}의 사고력 체스 교육기관, 생각키움연구소 {branch}입니다."
         )
+    # 게시 직전 제목·인스타그램의 지점 혼동도 경고한다.
+    # 블로그 본문 검사만으로는 별도 채널의 오류를 발견할 수 없다.
+    for section_name, section_text in (
+        ("제목", result_text.split("===제목후보===", 1)[-1].split("===블로그본문===", 1)[0]),
+        ("인스타그램", result_text.split("===인스타그램===", 1)[-1].split("===해시태그===", 1)[0]),
+    ):
+        for other_branch in ("사우점", "장기점", "구래점"):
+            if other_branch != branch and re.search(
+                r"(?:생각키움연구소\s*)?" + re.escape(other_branch)
+                + r"(?:의|에서는|에서|은|는|을|를|\s*수업|\s*모집|\s*체험|에)", section_text
+            ):
+                warning = section_name + "의 다른 지점 언급 확인 필요: " + other_branch
+                if warning not in issues:
+                    issues.append(warning)
     # 경고는 응답에 포함하되 422로 게시물 생성을 차단하지 않는다.
     with POST_HISTORY_LOCK:
         history = POST_HISTORY.setdefault(history_key, deque(maxlen=12))
         history.append({"text": result_text, "angle": angle_name,
                         "excerpt": post_body(result_text)[:230]})
     return {"text": result_text, "keywords": kws, "editorial_angle": angle_name,
+            "editorial_plan": editorial_plan,
             "similarity": similarity, "quality_warnings": issues}
 
 
