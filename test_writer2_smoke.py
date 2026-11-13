@@ -51,6 +51,25 @@ class Writer2SmokeTests(unittest.TestCase):
                 self.assertTrue(any("response_format" in call for call in fake.calls))
                 self.assertIn("===블로그본문===", payload["text"])
 
+    def test_daangn_writer2_review(self):
+        class DaangnCompletions:
+            def __init__(self):
+                self.calls = []
+            def create(self, **kwargs):
+                self.calls.append(kwargs)
+                if kwargs.get("response_format") and "검수하세요" in str(kwargs.get("messages")):
+                    return response('{"pass":true,"fix_instruction":""}')
+                return response('{"title":"구래점 체스 수업","body":"생각키움연구소 구래점에서는 후보 수를 비교하고 복기하는 방법을 소개합니다.","missing_info":[]}')
+        fake = DaangnCompletions()
+        client = SimpleNamespace(chat=SimpleNamespace(completions=fake))
+        with patch.object(app, "get_client", return_value=client):
+            result = TestClient(app.app).post("/api/daangn-draft", data={
+                "branch":"구래점", "post_type":"신규모집", "topic":"후보 수 비교 수업"
+            })
+        self.assertEqual(result.status_code, 200, result.text[:500])
+        self.assertIn("구래점", result.json()["body"])
+        self.assertGreaterEqual(len(fake.calls), 2)
+
     def test_existing_daangn_page(self):
         self.assertEqual(TestClient(app.app).get("/daangn").status_code, 200)
 
