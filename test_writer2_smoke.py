@@ -31,6 +31,38 @@ class FakeCompletions:
         )
 
 class Writer2SmokeTests(unittest.TestCase):
+    def test_rejects_generic_opening_and_unverified_achievement(self):
+        text = ("===블로그본문===\\n생각키움연구소 사우점에서 체스를 배웁니다. "
+                + "체스 어렵지 않을까요? " + "후보 수를 비교합니다. " * 20
+                + "\\n===인스타그램===\\n사고력 체스")
+        issues = app.post_issues(text, "")
+        self.assertIn("상투적 도입·가상 상담·과장 표현", issues)
+
+    def test_similarity_detects_identical_drafts(self):
+        sample = "===블로그본문===\\n생각키움연구소 사우점에서 전술과 복기를 익힙니다. " * 8
+        self.assertGreater(app.post_similarity(sample, sample), 0.9)
+
+    def test_wrong_location_is_flagged(self):
+        class WrongLocation(FakeCompletions):
+            def create(self, **kwargs):
+                if kwargs.get("response_format"):
+                    return response('{"pass":true,"issues":[],"fix_instruction":""}')
+                return response(
+                    "===제목후보===\\n사우점 체스 수업\\n"
+                    "===블로그본문===\\n풍무동에 위치한 생각키움연구소 사우점에서 "
+                    + "후보 수를 비교하고 안전한 칸을 탐색합니다. " * 12 +
+                    "\\n===인스타그램===\\n사우점 체스 수업"
+                    "\\n===해시태그===\\n#김포체스학원"
+                )
+        fake = WrongLocation()
+        with patch.object(app, "get_client", return_value=SimpleNamespace(chat=SimpleNamespace(completions=fake))):
+            result = TestClient(app.app).post("/api/generate", data={
+                "branch":"사우점","content_type":"신규모집","target":"초등학생",
+                "lesson":"풍무동 학부모 대상 사우점 사고력 체스 수업"
+            })
+        self.assertEqual(result.status_code, 200, result.text[:500])
+        self.assertNotIn("풍무동에 위치한 생각키움연구소 사우점", result.json()["text"])
+
     def test_health(self):
         self.assertEqual(TestClient(app.app).get("/health").status_code, 200)
 
