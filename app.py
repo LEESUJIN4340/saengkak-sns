@@ -1039,7 +1039,10 @@ async def generate(
         f"- {item['angle']}: {item['excerpt']}" for item in recent_history[-4:]
     ) or "이 인스턴스에 이전 생성 기록 없음"
     variation_rule = f"""
-[1단계 편집 기획 — 도입·소제목·본문·마무리 모두 준수]\n{editorial_plan}\n\n[이번 글의 편집 구도 — 매 생성마다 변경]
+[1단계 편집 기획 — 도입·소제목·본문·마무리 모두 준수]
+{editorial_plan}
+
+[이번 글의 편집 구도 — 매 생성마다 변경]
 - 선택 구도: {angle_name}
 - 구성 지침: {angle_instruction}\n- 다음은 소제목으로 그대로 복사할 문구가 아니라 구성의 참고 주제다: {angle_sections[angle_name]}
 - 먼저 글의 핵심 독자 질문 하나를 정하고, 도입에서 그 질문을 제시한다. 이어 각 소제목은 질문에 대한 답의 서로 다른 측면을 설명한다.
@@ -1420,7 +1423,8 @@ async def generate(
         history = POST_HISTORY.setdefault(history_key, deque(maxlen=12))
         history.append({"text": result_text, "angle": angle_name,
                         "excerpt": post_body(result_text)[:230]})
-    return {"text": result_text, "keywords": kws, "editorial_angle": angle_name,\n            "editorial_plan": editorial_plan,
+    return {"text": result_text, "keywords": kws, "editorial_angle": angle_name,
+            "editorial_plan": editorial_plan,
             "similarity": similarity, "quality_warnings": issues}
 
 
