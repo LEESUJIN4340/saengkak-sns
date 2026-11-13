@@ -102,6 +102,21 @@ class Writer2SmokeTests(unittest.TestCase):
         self.assertEqual(result.status_code, 200, result.text[:500])
         self.assertTrue(any("실제 수업 사례 검증 필요" in x for x in result.json()["quality_warnings"]))
 
+    def test_recent_post_context_is_used(self):
+        import json
+        fake = FakeCompletions()
+        client = SimpleNamespace(chat=SimpleNamespace(completions=fake))
+        prior = [{"body":"생각키움연구소 사우점에서 후보 수 비교를 안내했습니다. 같은 문장 반복을 피하세요."}]
+        with patch.object(app, "get_client", return_value=client):
+            result = TestClient(app.app).post("/api/generate", data={
+                "branch":"사우점","content_type":"신규모집","target":"초등학생",
+                "lesson":"포크 전술을 통한 사고력 수업",
+                "recent_posts":json.dumps(prior, ensure_ascii=False)
+            })
+        self.assertEqual(result.status_code, 200, result.text[:500])
+        prompt = str(fake.calls[0].get("messages", []))
+        self.assertIn("같은 문장 반복을 피하세요", prompt)
+
     def test_health(self):
         self.assertEqual(TestClient(app.app).get("/health").status_code, 200)
 
