@@ -291,7 +291,7 @@ def post_issues(text, memo):
         issues.append("본문 누락 또는 지나치게 짧음")
     if "생각키움연구소" not in body:
         issues.append("브랜드명 누락")
-    if re.search(r"체스[,，]?\\s*어렵지\\s*않을까요|한\\s*어머니께서|학업\\s*능력\\s*향상|학교\\s*성적\\s*향상", body):
+    if re.search(r"체스[,，]?\s*어렵지\s*않을까요|한\s*어머니께서|학업\s*능력\s*향상|학교\s*성적\s*향상", body):
         issues.append("상투적 도입·가상 상담·과장 표현")
     # 실제 인용이 없을 때는 서술형 인용을 금지한다. 예시 질문은 따로 표시해야 한다.
     if not re.search(r'["“][^"”]{4,}["”]', memo or "") and re.search(r'["“][^"”]{4,}["”]', body):
@@ -1297,7 +1297,7 @@ async def generate(
         problems = post_issues(candidate, lesson)
         body = post_body(candidate)
         other_branches = [b for b in ("사우점", "장기점", "구래점") if b != branch]
-        if branch not in body or any(re.search(r"(?:생각키움연구소\\s*)?" + re.escape(b) + r"(?:의|에서는|에서|은|는|을|를| 수업| 모집| 체험|에)", body) for b in other_branches):
+        if branch not in body or any(re.search(r"(?:생각키움연구소\s*)?" + re.escape(b) + r"(?:의|에서는|에서|은|는|을|를| 수업| 모집| 체험|에)", body) for b in other_branches):
             problems.append("선택 지점 불일치: 반드시 " + branch + "만 홍보")
 
         # 홍보 대상 지역을 실제 지점 소재지로 잘못 쓰는 경우 차단
@@ -1307,17 +1307,17 @@ async def generate(
             "구래점": ["풍무동", "운양동", "사우동", "장기동"],
         }
         for area in wrong_location.get(branch, []):
-            if re.search(re.escape(area) + r"\\s*(?:에|에\\s*있는|에\\s*위치한|소재|에\\s*자리한)\\s*(?:위치한\\s*)?(?:생각키움연구소\\s*)?" + re.escape(branch), body):
+            if re.search(re.escape(area) + r"\s*(?:에|에\s*있는|에\s*위치한|소재|에\s*자리한)\s*(?:위치한\s*)?(?:생각키움연구소\s*)?" + re.escape(branch), body):
                 problems.append("실제 지점 위치 오류: " + area + "에 " + branch + "이 있는 것처럼 표현")
         # 제목-본문의 기본적인 의미 일치 검증: '체험 전 안내'를 약속했으면
         # 실제로 확인할 사항을 설명해야 한다. 단순 체스 교육 홍보만 있으면 재작성.
-        trial_promise = bool(re.search(r"체험\\s*(?:수업)?\\s*전(?:에)?\\s*(?:알아|확인|준비)|체험\\s*전\\s*안내", body))
+        trial_promise = bool(re.search(r"체험\s*(?:수업)?\s*전(?:에)?\s*(?:알아|확인|준비)|체험\s*전\s*안내", body))
         if trial_promise:
             concrete_checks = sum(bool(re.search(pattern, body)) for pattern in (
-                r"상담\\s*(?:시|에서|때)|상담할\\s*때|상담\\s*전에",
-                r"체스\\s*경험|입문\\s*여부|학습\\s*수준|현재\\s*수준",
-                r"확인할\\s*(?:점|사항)|살펴볼\\s*(?:점|사항)|체험\\s*중",
-                r"준비물|소요\\s*시간|진행\\s*방식|예약\\s*방법",
+                r"상담\s*(?:시|에서|때)|상담할\s*때|상담\s*전에",
+                r"체스\s*경험|입문\s*여부|학습\s*수준|현재\s*수준",
+                r"확인할\s*(?:점|사항)|살펴볼\s*(?:점|사항)|체험\s*중",
+                r"준비물|소요\s*시간|진행\s*방식|예약\s*방법",
             ))
             if concrete_checks < 2:
                 problems.append("체험 전 안내라는 제목에 맞는 구체적인 확인 사항 부족")
@@ -1420,7 +1420,7 @@ async def generate(
                 for area in {"사우점": ("풍무동", "운양동", "구래동", "장기동"),
                              "장기점": ("풍무동", "운양동", "구래동", "사우동"),
                              "구래점": ("풍무동", "운양동", "사우동", "장기동")}.get(branch, ()):
-                    line = re.sub(re.escape(area) + r"\\s*에\\s*위치한\\s*(?:생각키움연구소\\s*)?" + re.escape(branch),
+                    line = re.sub(re.escape(area) + r"\s*에\s*위치한\s*(?:생각키움연구소\s*)?" + re.escape(branch),
                                   area + " 학부모를 위한 생각키움연구소 " + branch, line)
                 if not other:
                     safe_lines.append(line)
