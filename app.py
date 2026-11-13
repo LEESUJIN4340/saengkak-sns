@@ -1455,8 +1455,8 @@ async def generate(
     ):
         for other_branch in ("사우점", "장기점", "구래점"):
             if other_branch != branch and re.search(
-                r"(?:생각키움연구소\\s*)?" + re.escape(other_branch)
-                + r"(?:의|에서는|에서|은|는|을|를|\\s*수업|\\s*모집|\\s*체험|에)", section_text
+                r"(?:생각키움연구소\s*)?" + re.escape(other_branch)
+                + r"(?:의|에서는|에서|은|는|을|를|\s*수업|\s*모집|\s*체험|에)", section_text
             ):
                 warning = section_name + "의 다른 지점 언급 확인 필요: " + other_branch
                 if warning not in issues:
