@@ -1447,6 +1447,20 @@ async def generate(
             f"{label}, 생각키움연구소입니다.",
             f"김포 {local_area}의 사고력 체스 교육기관, 생각키움연구소 {branch}입니다."
         )
+    # 게시 직전 제목·인스타그램의 지점 혼동도 경고한다.
+    # 블로그 본문 검사만으로는 별도 채널의 오류를 발견할 수 없다.
+    for section_name, section_text in (
+        ("제목", result_text.split("===제목후보===", 1)[-1].split("===블로그본문===", 1)[0]),
+        ("인스타그램", result_text.split("===인스타그램===", 1)[-1].split("===해시태그===", 1)[0]),
+    ):
+        for other_branch in ("사우점", "장기점", "구래점"):
+            if other_branch != branch and re.search(
+                r"(?:생각키움연구소\\s*)?" + re.escape(other_branch)
+                + r"(?:의|에서는|에서|은|는|을|를|\\s*수업|\\s*모집|\\s*체험|에)", section_text
+            ):
+                warning = section_name + "의 다른 지점 언급 확인 필요: " + other_branch
+                if warning not in issues:
+                    issues.append(warning)
     # 경고는 응답에 포함하되 422로 게시물 생성을 차단하지 않는다.
     with POST_HISTORY_LOCK:
         history = POST_HISTORY.setdefault(history_key, deque(maxlen=12))
