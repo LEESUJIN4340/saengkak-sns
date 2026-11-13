@@ -51,6 +51,36 @@ class Writer2SmokeTests(unittest.TestCase):
                 self.assertTrue(any("response_format" in call for call in fake.calls))
                 self.assertIn("===블로그본문===", payload["text"])
 
+    def test_editorial_plan_separates_branch_and_target_region(self):
+        fake = FakeCompletions()
+        client = SimpleNamespace(chat=SimpleNamespace(completions=fake))
+        with patch.object(app, "get_client", return_value=client):
+            result = TestClient(app.app).post("/api/generate", data={
+                "branch": "사우점", "content_type": "신규모집",
+                "target": "초등학생",
+                "lesson": "풍무동 학부모 대상. 실제 사우점에서 포크 전술과 복기를 지도합니다."
+            })
+        self.assertEqual(result.status_code, 200, result.text[:500])
+        plan = result.json()["editorial_plan"]
+        self.assertIn("사우점(사우동)", plan)
+        self.assertIn("풍무동", plan)
+        self.assertIn("실제 지점 소재지와 구분", plan)
+
+    def test_generate_review_api_failure_falls_back(self):
+        class ReviewOutage(FakeCompletions):
+            def create(self, **kwargs):
+                if kwargs.get("response_format"):
+                    raise RuntimeError("editorial reviewer unavailable")
+                return super().create(**kwargs)
+        fake = ReviewOutage()
+        with patch.object(app, "get_client", return_value=SimpleNamespace(chat=SimpleNamespace(completions=fake))):
+            result = TestClient(app.app).post("/api/generate", data={
+                "branch": "장기점", "content_type": "신규모집",
+                "target": "초등학생", "lesson": "전술 문제와 실전 대국"
+            })
+        self.assertEqual(result.status_code, 200, result.text[:500])
+        self.assertIn("장기점", result.json()["text"])
+
     def test_daangn_writer2_review(self):
         class DaangnCompletions:
             def __init__(self):
