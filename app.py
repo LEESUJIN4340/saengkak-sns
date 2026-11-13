@@ -965,7 +965,7 @@ async def generate(
                 if isinstance(item, dict):
                     body = str(item.get("body") or "")[:700]
                     if body:
-                        recent_history.append({"text": "===블로그본문===\\n" + body,
+                        recent_history.append({"text": "===블로그본문===\n" + body,
                                                "angle": "이전 게시글", "excerpt": body[:230]})
     except (ValueError, TypeError):
         pass
@@ -1064,7 +1064,7 @@ async def generate(
         "교육부 2022 개정 교육과정의 핵심역량과 체스 활동은 유사한 사고 과정으로만 연결한다. "
         "실제 사례·자격·교육 효과를 새로 만들어내지 않는다."
     )
-    previous_context = "\\n".join(
+    previous_context = "\n".join(
         f"- {item['angle']}: {item['excerpt']}" for item in recent_history[-4:]
     ) or "이 인스턴스에 이전 생성 기록 없음"
     variation_rule = f"""
