@@ -135,6 +135,28 @@ class Writer2SmokeTests(unittest.TestCase):
         prompt = str(fake.calls[0]["messages"])
         self.assertNotIn("FIDE 공인 트레이너 강사진", prompt)
 
+    def test_wrong_branch_in_instagram_gets_warning(self):
+        class WrongInstagram(FakeCompletions):
+            def create(self, **kwargs):
+                if kwargs.get("response_format"):
+                    return response('{"pass":true,"issues":[],"fix_instruction":""}')
+                return response(
+                    "===제목후보===\\n사우점 체스 교육\\n"
+                    "===블로그본문===\\n" +
+                    "생각키움연구소 사우점에서 전술을 배웁니다. " * 15 +
+                    "\\n===인스타그램===\\n생각키움연구소 구래점에서 모집합니다."
+                    "\\n===해시태그===\\n#김포체스학원"
+                )
+        fake = WrongInstagram()
+        with patch.object(app, "get_client", return_value=SimpleNamespace(chat=SimpleNamespace(completions=fake))):
+            result = TestClient(app.app).post("/api/generate", data={
+                "branch":"사우점","content_type":"신규모집","target":"초등학생",
+                "lesson":"사우점 전술 수업"
+            })
+        self.assertEqual(result.status_code, 200, result.text[:500])
+        self.assertTrue(any("인스타그램의 다른 지점" in warning
+                            for warning in result.json()["quality_warnings"]))
+
     def test_health(self):
         self.assertEqual(TestClient(app.app).get("/health").status_code, 200)
 
