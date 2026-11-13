@@ -940,6 +940,13 @@ async def generate(
                                                "angle": "이전 게시글", "excerpt": body[:230]})
     except (ValueError, TypeError):
         pass
+    # '체험 전 안내형'은 실제 체험 준비·신청 정보를 다루는 글에서만 사용한다.
+    # 원생 모집/일반 학원 소개에서 이 구도를 뽑으면 도입 약속과 본문이 어긋난다.
+    is_trial_info = normalized_type in ("체험수업", "상담안내") or (
+        any(term in (lesson or "") for term in ("체험 전에", "체험수업 준비", "체험 준비물", "체험 안내"))
+    )
+    if not is_trial_info:
+        editorial_angles = [a for a in editorial_angles if a[0] != "체험 전 안내형"]
     # 직전 글과 같은 구도는 가능한 한 피한다.
     previous_angle = recent_history[-1]["angle"] if recent_history else None
     angle_name, angle_instruction = secrets.choice(
@@ -1016,6 +1023,7 @@ async def generate(
 [이번 글의 편집 구도 — 매 생성마다 변경]
 - 선택 구도: {angle_name}
 - 구성 지침: {angle_instruction}\n- 이번 글에 적용할 고유한 소제목 흐름: {angle_sections[angle_name]}
+- 소제목과 도입에서 예고한 정보는 반드시 해당 문단에서 구체적으로 설명한다. '체험 전에 알아둘 점'이라면 학부모가 실제로 확인할 준비·진행·상담 항목을 안내한다. 정보가 제공되지 않았다면 '체험수업에서 살펴볼 사고 활동'처럼 실제 설명할 수 있는 제목으로 바꾼다. 일반적인 체스 장점만 나열해 제목의 약속을 어기지 않는다.
 - 도입 스타일: {intro_style}\n- 이전 글에서 반복하면 안 되는 실제 도입·소제목:\n{previous_context}
 - 모집 글이라도 매번 '걱정하는 학부모→집중력→복기→체험 신청' 순서로 쓰지 않는다.
 - 소제목·문단 순서·예시·첫 문장·마무리 표현을 구도에 맞게 바꾼다.
