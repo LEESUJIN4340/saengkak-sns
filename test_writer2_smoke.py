@@ -157,6 +157,26 @@ class Writer2SmokeTests(unittest.TestCase):
         self.assertTrue(any("인스타그램의 다른 지점" in warning
                             for warning in result.json()["quality_warnings"]))
 
+    def test_repeated_generation_does_not_break_output_contract(self):
+        for branch in ("사우점", "장기점", "구래점"):
+            for number in range(3):
+                with self.subTest(branch=branch, iteration=number):
+                    fake = FakeCompletions()
+                    with patch.object(app, "get_client", return_value=SimpleNamespace(
+                        chat=SimpleNamespace(completions=fake))):
+                        result = TestClient(app.app).post("/api/generate", data={
+                            "branch": branch, "content_type": "신규모집",
+                            "target": "초등학생",
+                            "lesson": "후보 수 비교와 전술 학습 " + str(number),
+                        })
+                    self.assertEqual(result.status_code, 200, result.text[:500])
+                    data = result.json()
+                    self.assertIn(branch, data["text"])
+                    for marker in ("===제목후보===", "===블로그본문===",
+                                   "===인스타그램===", "===해시태그==="):
+                        self.assertIn(marker, data["text"])
+                    self.assertIsInstance(data["quality_warnings"], list)
+
     def test_health(self):
         self.assertEqual(TestClient(app.app).get("/health").status_code, 200)
 
