@@ -664,24 +664,12 @@ async def daangn_draft(
         "• '선생님은 ~했습니다' 같은 3인칭 관찰자 시점은 절대 사용하지 않습니다.\n"
         "• 당근은 동네 이웃에게 말 걸듯 친근하고 따뜻하게 씁니다. 과장된 광고 문체 금지.\n"
         "• 확인되지 않은 수상·할인·일정·체험수업을 지어내지 않습니다.\n\n"
-        "[글 구조 — 반드시 이 순서로]\n"
-        "① 도입: '안녕하세요'로 절대 시작하지 않습니다.\n"
-        "   학부모가 공감할 고민이나 상황으로 시작하세요.\n"
-        "   예) '집중력이 짧은 아이, 혹시 고민이신가요?'\n"
-        "       '학원은 싫다는 아이가 체스만큼은 먼저 가자고 해요.'\n"
-        "       '오늘 수업에서 신기한 일이 있었어요.'\n"
-        "② 수업 장면: 기다림+힌트 한 마디로 아이가 스스로 찾아내는 구체적인 장면 1개.\n"
-        "   힌트는 아이가 고민하는 기물 이름을 그대로 반복하면 안 됩니다.\n"
-        "   힌트는 아이가 '못 보고 있는 것'을 살짝 가리키는 말이어야 합니다.\n"
-        "   예) 룩을 고민할 때 → '저 칸이 비어있지?' 또는 '퀸이 길을 막고 있는 거 보여?'\n"
-        "   예) 나이트를 고민할 때 → '여기서 L자로 가면 어디가 나오지?'\n"
-        "   (고민하던 기물 이름을 그대로 되묻는 힌트는 절대 사용 금지)\n"
-        "③ 변화: 그 장면이 아이에게 어떤 변화나 반응으로 이어졌는지 한 문장.\n"
-        "   구체적인 행동이나 표정으로 보여주세요. 대사보다 장면이 더 자연스럽습니다.\n"
-        "   예) '그날 이후로 아이가 스스로 가방을 챙기기 시작했어요.'\n"
-        "   예) '집에 오자마자 체스판을 꺼내는 아이를 보면서, 잘 됐다 싶었어요.'\n"
-        "   예) '수업이 끝나도 자리를 안 뜨려는 아이를 보며 저도 모르게 웃었습니다.'\n"
-        "④ 마무리: 위치·과정 등 실용 정보를 자연스럽게 한두 문장으로 덧붙입니다.\n\n"
+        "[글 구조 — 주제별로 달라지는 안내]\\n"
+        "• 제목과 도입은 실제 주제에 맞춰 쓰고 본문에서 약속한 내용을 구체적으로 설명합니다.\\n"
+        "• 수업 기록이 없다면 학생 대사, 학부모 후기, 현장 장면, 성과를 창작하지 않습니다.\\n"
+        "• 모집은 수업 대상·활동·상담 정보를, 수업후기는 제공된 사실을 중심으로 씁니다.\\n"
+        "• 체스의 후보 수 비교·전술·복기 중 하나를 구체적으로 설명하고 매번 다른 구성을 선택합니다.\\n"
+        "• 2022 개정 교육과정은 공통 사고 활동으로만 연결하고 성적 향상을 보장하지 않습니다.\\n\\n"
         "[체스 용어]\n"
         "• '기물'만 사용 (말·돌·블록·체스조각 금지)\n"
         "• 기물 이름: 킹·퀸·룩·비숍·나이트·폰\n\n"
@@ -704,7 +692,7 @@ async def daangn_draft(
         f"{branch_info_text}\n\n"
         "위 정보를 바탕으로 당근 비즈프로필용 소식을 작성하세요.\n"
         "제목: 30자 이내, 동네 이웃에게 말 걸듯 친근하게.\n"
-        "본문: 200~450자. 1인칭으로, 수업 현장 장면 하나를 중심으로 풀어쓰세요.\n"
+        "본문: 200~450자. 1인칭으로, 실제 장면이 제공된 경우에만 활용하고, 그렇지 않으면 사실 중심 안내글로 작성하세요.\n"
         "JSON만 출력: {\"title\":\"제목\",\"body\":\"본문\",\"missing_info\":[]}"
     )
 
@@ -728,8 +716,49 @@ async def daangn_draft(
         if not season["allow_new_semester"] and has_new_semester_phrase(body_text):
             body_text = fix_new_semester_phrase(body_text, season["label"])
 
+        # Writer 2.0 당근 독립 검수: 장애 시 기존 초안 보존
+        title_text = str(data.get("title", ""))
+        if title_text and body_text:
+            try:
+                check_prompt = (
+                    "당근 홍보글 독립 편집자입니다. JSON만 반환하세요: "
+                    '{"pass":true,"fix_instruction":""}. '
+                    "제목에서 약속한 내용을 본문이 설명하는지, 실제 메모에 없는 "
+                    "수업 장면·대화·학부모 후기를 만들었는지, 지점과 검색어가 "
+                    "정확한지 검수하세요. 지점: " + branch +
+                    "\\n실제 소재: " + (topic + " " + effective_facts)[:800] +
+                    "\\n제목: " + title_text + "\\n본문: " + body_text
+                )
+                check = c.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": check_prompt}],
+                    response_format={"type": "json_object"},
+                    max_tokens=250, temperature=0.1,
+                )
+                feedback = json.loads(check.choices[0].message.content or "{}")
+                if feedback.get("pass") is False and feedback.get("fix_instruction"):
+                    revised_response = c.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content":
+                                "다음 검수 지적을 고쳐 제목 30자 이내, 본문 200~450자의 "
+                                'JSON {"title":"","body":"","missing_info":[]}만 출력하세요. '
+                                "새 사실은 만들지 말고 지점 " + branch + "을 유지하세요.\\n"
+                                + str(feedback["fix_instruction"])[:500] +
+                                "\\n제목: " + title_text + "\\n본문: " + body_text}
+                        ],
+                        response_format={"type": "json_object"},
+                        max_tokens=900, temperature=0.3,
+                    )
+                    revised = json.loads(revised_response.choices[0].message.content or "{}")
+                    new_title, new_body = str(revised.get("title", "")), str(revised.get("body", ""))
+                    if new_title and new_body and branch in (new_title + " " + new_body):
+                        title_text, body_text = new_title, new_body
+            except Exception:
+                pass
         return {
-            "title": str(data.get("title", "")),
+            "title": title_text,
             "body": body_text,
             "missing_info": data.get("missing_info", [])
         }
