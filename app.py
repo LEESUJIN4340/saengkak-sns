@@ -1012,11 +1012,34 @@ async def generate(
         "실전과 복기 비교형": "실전에서 선택하는 힘 / 복기에서 되짚는 힘 / 두 과정의 연결 / 수업 안내",
         "체험 전 안내형": "체험 전에 알아둘 점 / 수업에서 살펴볼 학습 활동 / 수준별 수업 선택 / 상담 안내",
     }
+    # Writer 2.0 / 1단계: 사용자 의도와 검증된 수업 소재로 편집 계획 수립
+    branch_local = {"사우점": "사우동", "장기점": "장기동", "구래점": "구래동"}[branch]
+    audience_region = next((area for area in ("풍무동", "운양동", "걸포동", "북변동", "사우동", "장기동", "구래동")
+                            if area in (lesson + " " + keyword)), branch_local)
+    teaching_topics = {
+        "교육과정 연결형": "후보 수의 근거 설명과 지식정보처리·창의적 사고 역량",
+        "수업 과정 해설형": "전술 학습과 대국·복기의 구체적 차이",
+        "학부모 선택 가이드형": "체스 경험과 학습 수준에 맞는 수업 선택",
+        "체스 개념 집중형": "기물 가치·포크·핀 등 한 개념의 정확한 이해",
+        "교육 철학 에세이형": "관찰·가설·검증·선택·성찰의 사고 과정",
+        "학습 단계 소개형": "입문·기본·중급·상급·선수반의 학습 목표",
+        "실전과 복기 비교형": "대국의 의사결정과 복기의 자기점검",
+        "체험 전 안내형": "체험 전 확인할 학습 수준과 상담 질문",
+    }
+    editorial_plan = (
+        f"목적: {normalized_type}; 실제 지점: 생각키움연구소 {branch}({branch_local}); "
+        f"검색 대상 지역: {audience_region}(실제 지점 소재지와 구분); "
+        f"독자: {target}; 중심 소재: {teaching_topics[angle_name]}; "
+        f"실제 제공 메모: {lesson[:650]}; "
+        "첫 문단에서 독자에게 줄 정보를 약속하고 각 소제목 아래에서 그 약속에 답한다. "
+        "교육부 2022 개정 교육과정의 핵심역량과 체스 활동은 유사한 사고 과정으로만 연결한다. "
+        "실제 사례·자격·교육 효과를 새로 만들어내지 않는다."
+    )
     previous_context = "\\n".join(
         f"- {item['angle']}: {item['excerpt']}" for item in recent_history[-4:]
     ) or "이 인스턴스에 이전 생성 기록 없음"
     variation_rule = f"""
-[이번 글의 편집 구도 — 매 생성마다 변경]
+[1단계 편집 기획 — 도입·소제목·본문·마무리 모두 준수]\n{editorial_plan}\n\n[이번 글의 편집 구도 — 매 생성마다 변경]
 - 선택 구도: {angle_name}
 - 구성 지침: {angle_instruction}\n- 다음은 소제목으로 그대로 복사할 문구가 아니라 구성의 참고 주제다: {angle_sections[angle_name]}
 - 먼저 글의 핵심 독자 질문 하나를 정하고, 도입에서 그 질문을 제시한다. 이어 각 소제목은 질문에 대한 답의 서로 다른 측면을 설명한다.
@@ -1298,6 +1321,55 @@ async def generate(
                 result_text, issues, similarity = candidate, new_issues, new_similarity
         except Exception:
             break
+    # Writer 2.0 / 3단계: 초안의 독자 효용과 제목-본문 일치 검토.
+    # 검수 API 장애 시에도 기존 생성 기능을 유지한다.
+    try:
+        review_prompt = (
+            "당신은 한국어 학원 홍보 원고의 독립 편집자입니다. JSON 객체만 반환하세요. "
+            '{"pass":true,"issues":[],"fix_instruction":""} 형식. '
+            "다음 항목을 엄격하게 검토: (1) 도입에서 예고한 정보에 본문이 실제 답하는지 "
+            "(2) 제목과 소제목의 약속을 해당 문단이 충족하는지 "
+            "(3) 지점과 대상 지역을 혼동하지 않는지 "
+            "(4) 검색어를 상호처럼 쉼표로 나열하지 않는지 "
+            "(5) 체스 전술·교육과정 설명이 구체적이고 과장 없는지 "
+            "(6) 이전 글과 소제목·도입·전개가 반복되지 않는지 "
+            "(7) 블로그와 인스타그램이 각각 읽기 좋은 독립 원고인지. "
+            "없는 수업 사실이나 대화를 만들라고 요구하지 마세요. "
+            "검토 계획: " + editorial_plan +
+            "\\n최근 글: " + previous_context[:700] +
+            "\\n검토할 원고:\\n" + result_text[:8500]
+        )
+        review_response = c.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": review_prompt}],
+            response_format={"type": "json_object"},
+            max_tokens=450,
+            temperature=0.1,
+        )
+        review_data = json.loads(review_response.choices[0].message.content or "{}")
+        review_issues = review_data.get("issues", [])
+        if isinstance(review_issues, list):
+            issues.extend(str(issue)[:120] for issue in review_issues[:4] if issue)
+        if review_data.get("pass") is False and review_data.get("fix_instruction"):
+            instruction = str(review_data["fix_instruction"])[:600]
+            revision = c.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": "아래 원고의 사실과 지점 및 출력 구분자를 보존하면서 편집 검수 지적만 고치세요. 새 사실을 만들지 마세요.\\n"
+                     + instruction + "\\n" + result_text}
+                ],
+                max_tokens=3000,
+                temperature=0.55,
+            )
+            revised = (revision.choices[0].message.content or "").strip()
+            required = ("===제목후보===", "===블로그본문===", "===인스타그램===", "===해시태그===")
+            if all(token in revised for token in required):
+                revised_issues, revised_similarity = evaluate(revised)
+                if not any("선택 지점 불일치" in issue for issue in revised_issues):
+                    result_text, issues, similarity = revised, revised_issues, revised_similarity
+    except Exception:
+        pass
     # 위치 관련 오류는 안전한 표현으로 교정해 글 생성을 불필요하게 차단하지 않는다.
     # 지점명을 바꿔 쓰는 것만으로 소재지를 허위로 표현하지 않도록 문장 단위로 처리한다.
     if any(("선택 지점 불일치" in item or "실제 지점 위치 오류" in item) for item in issues):
@@ -1348,7 +1420,7 @@ async def generate(
         history = POST_HISTORY.setdefault(history_key, deque(maxlen=12))
         history.append({"text": result_text, "angle": angle_name,
                         "excerpt": post_body(result_text)[:230]})
-    return {"text": result_text, "keywords": kws, "editorial_angle": angle_name,
+    return {"text": result_text, "keywords": kws, "editorial_angle": angle_name,\n            "editorial_plan": editorial_plan,
             "similarity": similarity, "quality_warnings": issues}
 
 
