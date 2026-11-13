@@ -726,8 +726,8 @@ async def daangn_draft(
                     "제목에서 약속한 내용을 본문이 설명하는지, 실제 메모에 없는 "
                     "수업 장면·대화·학부모 후기를 만들었는지, 지점과 검색어가 "
                     "정확한지 검수하세요. 지점: " + branch +
-                    "\\n실제 소재: " + (topic + " " + effective_facts)[:800] +
-                    "\\n제목: " + title_text + "\\n본문: " + body_text
+                    "\n실제 소재: " + (topic + " " + effective_facts)[:800] +
+                    "\n제목: " + title_text + "\n본문: " + body_text
                 )
                 check = c.chat.completions.create(
                     model="gpt-4o",
@@ -744,9 +744,9 @@ async def daangn_draft(
                             {"role": "user", "content":
                                 "다음 검수 지적을 고쳐 제목 30자 이내, 본문 200~450자의 "
                                 'JSON {"title":"","body":"","missing_info":[]}만 출력하세요. '
-                                "새 사실은 만들지 말고 지점 " + branch + "을 유지하세요.\\n"
+                                "새 사실은 만들지 말고 지점 " + branch + "을 유지하세요.\n"
                                 + str(feedback["fix_instruction"])[:500] +
-                                "\\n제목: " + title_text + "\\n본문: " + body_text}
+                                "\n제목: " + title_text + "\n본문: " + body_text}
                         ],
                         response_format={"type": "json_object"},
                         max_tokens=900, temperature=0.3,
@@ -1368,8 +1368,8 @@ async def generate(
             "(7) 블로그와 인스타그램이 각각 읽기 좋은 독립 원고인지. "
             "없는 수업 사실이나 대화를 만들라고 요구하지 마세요. "
             "검토 계획: " + editorial_plan +
-            "\\n최근 글: " + previous_context[:700] +
-            "\\n검토할 원고:\\n" + result_text[:8500]
+            "\n최근 글: " + previous_context[:700] +
+            "\n검토할 원고:\n" + result_text[:8500]
         )
         review_response = c.chat.completions.create(
             model="gpt-4o",
@@ -1388,8 +1388,8 @@ async def generate(
                 model="gpt-4o",
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": "아래 원고의 사실과 지점 및 출력 구분자를 보존하면서 편집 검수 지적만 고치세요. 새 사실을 만들지 마세요.\\n"
-                     + instruction + "\\n" + result_text}
+                    {"role": "user", "content": "아래 원고의 사실과 지점 및 출력 구분자를 보존하면서 편집 검수 지적만 고치세요. 새 사실을 만들지 마세요.\n"
+                     + instruction + "\n" + result_text}
                 ],
                 max_tokens=3000,
                 temperature=0.55,
@@ -1398,7 +1398,7 @@ async def generate(
             required = ("===제목후보===", "===블로그본문===", "===인스타그램===", "===해시태그===")
             if all(token in revised for token in required):
                 revised_issues, revised_similarity = evaluate(revised)
-                if not any("선택 지점 불일치" in issue for issue in revised_issues):
+                if not revised_issues and revised_similarity < 0.62:
                     result_text, issues, similarity = revised, revised_issues, revised_similarity
     except Exception:
         pass
