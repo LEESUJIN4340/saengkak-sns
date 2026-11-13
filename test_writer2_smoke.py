@@ -70,6 +70,29 @@ class Writer2SmokeTests(unittest.TestCase):
         self.assertIn("구래점", result.json()["body"])
         self.assertGreaterEqual(len(fake.calls), 2)
 
+    def test_daangn_review_failure_keeps_original(self):
+        class FailingReview:
+            def __init__(self):
+                self.calls = 0
+            def create(self, **kwargs):
+                self.calls += 1
+                if self.calls == 1:
+                    return response('{"title":"사우점 체스","body":"생각키움연구소 사우점에서 체스 전술을 안내합니다.","missing_info":[]}')
+                raise RuntimeError("review API unavailable")
+        fake = FailingReview()
+        with patch.object(app, "get_client", return_value=SimpleNamespace(chat=SimpleNamespace(completions=fake))):
+            result = TestClient(app.app).post("/api/daangn-draft", data={
+                "branch":"사우점","post_type":"신규모집","topic":"전술 수업 안내"
+            })
+        self.assertEqual(result.status_code, 200, result.text[:500])
+        self.assertIn("사우점", result.json()["body"])
+
+    def test_daangn_rejects_wrong_branch(self):
+        result = TestClient(app.app).post("/api/daangn-draft", data={
+            "branch":"풍무점","post_type":"신규모집","topic":"체스 수업"
+        })
+        self.assertEqual(result.status_code, 400)
+
     def test_existing_daangn_page(self):
         self.assertEqual(TestClient(app.app).get("/daangn").status_code, 200)
 
