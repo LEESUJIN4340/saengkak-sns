@@ -117,6 +117,24 @@ class Writer2SmokeTests(unittest.TestCase):
         prompt = str(fake.calls[0].get("messages", []))
         self.assertIn("같은 문장 반복을 피하세요", prompt)
 
+    def test_daangn_default_facts_do_not_claim_all_trainers_are_fide_certified(self):
+        class Capture:
+            def __init__(self):
+                self.calls = []
+            def create(self, **kwargs):
+                self.calls.append(kwargs)
+                if len(self.calls) > 1:
+                    return response('{"pass":true,"fix_instruction":""}')
+                return response('{"title":"구래점 체스","body":"생각키움연구소 구래점에서는 후보 수 비교를 안내합니다.","missing_info":[]}')
+        fake = Capture()
+        with patch.object(app, "get_client", return_value=SimpleNamespace(chat=SimpleNamespace(completions=fake))):
+            result = TestClient(app.app).post("/api/daangn-draft", data={
+                "branch":"구래점","post_type":"신규모집","topic":"초등 사고력 체스"
+            })
+        self.assertEqual(result.status_code, 200, result.text[:500])
+        prompt = str(fake.calls[0]["messages"])
+        self.assertNotIn("FIDE 공인 트레이너 강사진", prompt)
+
     def test_health(self):
         self.assertEqual(TestClient(app.app).get("/health").status_code, 200)
 
